@@ -1,0 +1,49 @@
+
+services:
+  api:
+    build:
+      context: ./pe-api
+      dockerfile: Dockerfile
+    container_name: pe_api
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./pe-api/.env
+    volumes:
+      - ./pe-api:/app
+      - /app/node_modules
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: pe_db
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: lpe_user
+      POSTGRES_PASSWORD: lpe_pass
+      POSTGRES_DB: lpe_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: pe_redis
+    ports:
+      - '6379:6379'
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: pe_mailhog
+    ports:
+      - '1025:1025'   # SMTP
+      - '8025:8025'   # UI web
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
