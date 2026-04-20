@@ -1,0 +1,180 @@
+.dashboard-page {
+  padding-top: 2.5rem;
+}
+
+.dashboard-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  padding: 1.75rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-welcome::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--violet-bright),
+    var(--accent-cyan),
+    transparent
+  );
+}
+
+.dashboard-greeting {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.4rem;
+}
+
+.dashboard-subtext {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Grid layout */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-section {
+  margin-bottom: 1.5rem;
+}
+
+/* Tournaments */
+.tournament-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tournament-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tournament-card-top {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tournament-name {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.tournament-meta {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.tournament-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+/* Matches */
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.match-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+}
+
+.match-vs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.match-team {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  text-align: center;
+}
+
+.match-vs-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--violet-bright);
+  letter-spacing: 0.1em;
+  background: var(--violet-subtle);
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--border-subtle);
+}
+
+.match-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.match-date {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.match-tournament {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* No team */
+.no-team-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.no-team-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.empty-text {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  padding: 1rem;
+  text-align: center;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+}
