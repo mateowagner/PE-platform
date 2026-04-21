@@ -16,11 +16,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/v1/users", {
-        method: "GET",
-        //headers: { "Content-Type": "application/json" },
-        //credentials: "include",
-        //body: JSON.stringify(form),
+      const res = await fetch("http://localhost:3000/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(form),
       });
 
       const data = await res.json();
@@ -33,6 +33,7 @@ export default function LoginPage() {
       login(data.user, data.accessToken);
       navigate("/dashboard");
     } catch {
+      setError("Error de conexión con el servidor");
     } finally {
       setLoading(false);
     }

@@ -49,4 +49,14 @@ export class TeamsService {
   async remove(id: string) {
     return await this.teamsRepository.delete(id);
   }
+  async getMembers(id: string) {
+    const team = await this.teamsRepository.findOne({
+      where: { id },
+      relations: ['members'],
+    });
+    if (!team) {
+      throw new NotFoundException(`Team with id ${id} not found`);
+    }
+    return team.members;
+  }
 }
