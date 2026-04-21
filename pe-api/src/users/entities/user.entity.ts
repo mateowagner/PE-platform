@@ -8,6 +8,12 @@ import {
 import { Exclude } from 'class-transformer';
 import { Team } from '../../teams/entities/team.entity';
 
+export enum UserRole {
+  USER = 'USER',
+  STAFF = 'STAFF',
+  ADMIN = 'ADMIN',
+}
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -23,10 +29,15 @@ export class User {
   @Exclude()
   password!: string;
 
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role!: UserRole;
+
+  @Column({ nullable: true, type: 'text' })
+  refreshTokenHash!: string | null;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
-  // Equipo al que pertenece (nullable porque puede no estar en ninguno)
   @ManyToOne(() => Team, (team) => team.members, {
     eager: false,
     nullable: true,
