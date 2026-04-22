@@ -9,28 +9,37 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  ConflictException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './Guards';
-import { JwtPayload } from './jwt.strategy';
-import { Throttle, SkipThrottle } from '@nestjs/throttler';
+import { JwtPayload, RequestUser } from './jwt.strategy';
+import { RiotService } from '../riot/riot.service';
+import { UsersService } from '../users/users.service';
+import { LinkAccountDto } from '../riot/dto/link-account.dto';
 
-// Extiende el tipo Request de Express para incluir req.user
 interface AuthenticatedRequest extends Request {
-  user: { id: string; username: string; role: string };
+  user: RequestUser;
 }
 
-// Tipo de retorno de AuthService para poder omitir refreshToken de forma segura
 type AuthTokens = {
   accessToken: string;
   refreshToken: string;
-  username: string;
-  userId: string;
-  role: string;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+    riotGameName: string | null;
+    riotRegion: string | null;
+    soloTier: string | null;
+    rankPoints: number;
+  };
 };
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -42,12 +51,11 @@ const COOKIE_OPTIONS = {
   path: '/auth',
 };
 
-// Omite refreshToken del body de respuesta de forma type-safe
 function withoutRefreshToken(
   tokens: AuthTokens,
 ): Omit<AuthTokens, 'refreshToken'> {
   const { refreshToken: _omit, ...result } = tokens;
-  void _omit; // marca explícita para ESLint: la variable es intencionalmente descartada
+  void _omit;
   return result;
 }
 
@@ -57,7 +65,10 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly riotService: RiotService,
+    private readonly usersService: UsersService,
   ) {}
+
   @Throttle({ default: { ttl: 60000, limit: 3 } })
   @Post('register')
   async register(
@@ -87,13 +98,10 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    // Tipamos cookies explícitamente para evitar `any`
     const cookies = req.cookies as Record<string, string>;
     const refreshToken = cookies[REFRESH_COOKIE];
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
 
-    // Verificamos y decodificamos con el secret del refresh token.
-    // Esto reemplaza el decode manual (que era `any` y no verificaba la firma).
     let payload: JwtPayload;
     try {
       payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, {
@@ -122,10 +130,59 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE, { path: '/auth' });
     return { message: 'Logged out successfully' };
   }
+
   @SkipThrottle()
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() req: AuthenticatedRequest) {
     return req.user;
+  }
+
+  // ─── Vinculación con Riot Games ──────────────────────────────────────────
+
+  @Post('link-riot')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async linkRiot(
+    @Body() dto: LinkAccountDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const riotData = await this.riotService.getAccountData(dto.riotId);
+
+    // Verificamos que la cuenta Riot no esté vinculada a otro usuario
+    const existing = await this.usersService.findByPuuid(riotData.puuid);
+    if (existing && existing.id !== req.user.id) {
+      throw new ConflictException(
+        'This Riot account is already linked to another user',
+      );
+    }
+
+    await this.usersService.updateRiotData(req.user.id, {
+      riotPuuid: riotData.puuid,
+      riotGameName: riotData.gameName,
+      riotTagLine: riotData.tagLine,
+      riotRegion: 'LAS',
+      soloTier: riotData.soloTier,
+      soloRank: riotData.soloRank,
+      soloLp: riotData.soloLp,
+      flexTier: riotData.flexTier,
+      flexRank: riotData.flexRank,
+      flexLp: riotData.flexLp,
+      rankPoints: riotData.rankPoints,
+      rankUpdatedAt: new Date(),
+    });
+
+    return {
+      message: 'Riot account linked successfully',
+      gameName: riotData.gameName,
+      tagLine: riotData.tagLine,
+      soloQueue: riotData.soloTier
+        ? `${riotData.soloTier} ${riotData.soloRank} (${riotData.soloLp} LP)`
+        : 'Unranked',
+      flexQueue: riotData.flexTier
+        ? `${riotData.flexTier} ${riotData.flexRank} (${riotData.flexLp} LP)`
+        : 'Unranked',
+      rankPoints: riotData.rankPoints,
+    };
   }
 }

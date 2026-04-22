@@ -6,6 +6,21 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from '../teams/entities/team.entity';
 
+interface RiotDataUpdate {
+  riotPuuid: string;
+  riotGameName: string;
+  riotTagLine: string;
+  riotRegion: string;
+  soloTier: string | null;
+  soloRank: string | null;
+  soloLp: number;
+  flexTier: string | null;
+  flexRank: string | null;
+  flexLp: number;
+  rankPoints: number;
+  rankUpdatedAt: Date;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -30,20 +45,17 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     const user = await this.usersRepository.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`User with id ${id} not found`);
-    }
+    if (!user) throw new NotFoundException(`User with id ${id} not found`);
 
     let team: Team | undefined;
     if (updateUserDto.team_id) {
       const found = await this.teamsRepository.findOneBy({
         id: updateUserDto.team_id,
       });
-      if (!found) {
+      if (!found)
         throw new NotFoundException(
           `Team with id ${updateUserDto.team_id} not found`,
         );
-      }
       team = found;
     }
 
@@ -54,13 +66,11 @@ export class UsersService {
 
   async remove(id: string) {
     const user = await this.usersRepository.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`User with id ${id} not found`);
-    }
+    if (!user) throw new NotFoundException(`User with id ${id} not found`);
     return this.usersRepository.remove(user);
   }
 
-  // ─── Métodos usados por AuthService ────────────────────────────────────────
+  // ─── Auth ────────────────────────────────────────────────────────────────
 
   findByEmail(email: string) {
     return this.usersRepository.findOneBy({ email });
@@ -76,5 +86,18 @@ export class UsersService {
 
   async updateRefreshToken(userId: string, hash: string | null) {
     await this.usersRepository.update(userId, { refreshTokenHash: hash });
+  }
+
+  // ─── Riot ────────────────────────────────────────────────────────────────
+
+  findByPuuid(puuid: string) {
+    return this.usersRepository.findOneBy({ riotPuuid: puuid });
+  }
+
+  async updateRiotData(userId: string, data: RiotDataUpdate) {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException(`User with id ${userId} not found`);
+    Object.assign(user, data);
+    await this.usersRepository.save(user);
   }
 }

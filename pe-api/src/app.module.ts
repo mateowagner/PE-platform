@@ -6,6 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './users/users.module';
 import { TeamsModule } from './teams/teams.module';
 import { AuthModule } from './auth/auth.module';
+import { RiotModule } from './riot/riot.module';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -42,6 +43,7 @@ import jwtConfig from './config/jwt.config';
     UsersModule,
     TeamsModule,
     AuthModule,
+    RiotModule,
   ],
   providers: [
     {

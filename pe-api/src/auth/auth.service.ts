@@ -12,9 +12,16 @@ import { RegisterDto } from './dto/auth.dto';
 interface AuthResult {
   accessToken: string;
   refreshToken: string;
-  username: string;
-  userId: string;
-  role: string;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+    riotGameName: string | null;
+    riotRegion: string | null;
+    soloTier: string | null;
+    rankPoints: number;
+  };
 }
 
 @Injectable()
@@ -95,6 +102,22 @@ export class AuthService {
     const hash = await bcrypt.hash(refreshToken, 10);
     await this.usersService.updateRefreshToken(userId, hash);
 
-    return { accessToken, refreshToken, username, userId, role };
+    // Buscamos el usuario completo para devolver al frontend
+    const user = await this.usersService.findById(userId);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user!.id,
+        username: user!.username,
+        email: user!.email,
+        role: user!.role,
+        riotGameName: user!.riotGameName,
+        riotRegion: user!.riotRegion,
+        soloTier: user!.soloTier,
+        rankPoints: user!.rankPoints,
+      },
+    };
   }
 }

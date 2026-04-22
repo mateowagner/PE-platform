@@ -38,6 +38,46 @@ export class User {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
 
+  // ─── Riot Account ────────────────────────────────────────────────────────
+
+  @Column({ nullable: true, unique: true })
+  riotPuuid!: string;
+
+  @Column({ nullable: true })
+  riotGameName!: string;
+
+  @Column({ nullable: true })
+  riotTagLine!: string;
+
+  @Column({ nullable: true })
+  riotRegion!: string;
+
+  @Column({ nullable: true })
+  soloTier!: string;
+
+  @Column({ nullable: true })
+  soloRank!: string;
+
+  @Column({ nullable: true, type: 'int' })
+  soloLp!: number;
+
+  @Column({ nullable: true })
+  flexTier!: string;
+
+  @Column({ nullable: true })
+  flexRank!: string;
+
+  @Column({ nullable: true, type: 'int' })
+  flexLp!: number;
+
+  @Column({ default: 0, type: 'int' })
+  rankPoints!: number;
+
+  @Column({ nullable: true, type: 'timestamp' })
+  rankUpdatedAt!: Date;
+
+  // ─── Team ────────────────────────────────────────────────────────────────
+
   @ManyToOne(() => Team, (team) => team.members, {
     eager: false,
     nullable: true,

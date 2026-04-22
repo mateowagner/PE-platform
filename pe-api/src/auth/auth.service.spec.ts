@@ -99,7 +99,7 @@ describe('AuthService', () => {
       const result = await service.login('test@test.com', 'Password1');
 
       expect(result).toHaveProperty('accessToken');
-      expect(result.username).toBe(mockUser.username);
+      expect(result.user.username).toBe(mockUser.username);
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
