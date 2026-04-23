@@ -26,13 +26,3 @@
 .w-70 {
   width: 70%;
 }
-
-@keyframes shimmer {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}

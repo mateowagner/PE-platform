@@ -36,8 +36,14 @@ type AuthTokens = {
     email: string;
     role: string;
     riotGameName: string | null;
+    riotTagLine: string | null;
     riotRegion: string | null;
     soloTier: string | null;
+    soloRank: string | null;
+    soloLp: number;
+    flexTier: string | null;
+    flexRank: string | null;
+    flexLp: number;
     rankPoints: number;
   };
 };
@@ -172,6 +178,8 @@ export class AuthController {
       rankUpdatedAt: new Date(),
     });
 
+    const updatedUser = await this.usersService.findById(req.user.id);
+
     return {
       message: 'Riot account linked successfully',
       gameName: riotData.gameName,
@@ -183,6 +191,18 @@ export class AuthController {
         ? `${riotData.flexTier} ${riotData.flexRank} (${riotData.flexLp} LP)`
         : 'Unranked',
       rankPoints: riotData.rankPoints,
+      user: {
+        riotGameName: updatedUser!.riotGameName,
+        riotTagLine: updatedUser!.riotTagLine,
+        riotRegion: updatedUser!.riotRegion,
+        soloTier: updatedUser!.soloTier,
+        soloRank: updatedUser!.soloRank,
+        soloLp: updatedUser!.soloLp,
+        flexTier: updatedUser!.flexTier,
+        flexRank: updatedUser!.flexRank,
+        flexLp: updatedUser!.flexLp,
+        rankPoints: updatedUser!.rankPoints,
+      },
     };
   }
 }

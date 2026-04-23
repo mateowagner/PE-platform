@@ -97,7 +97,20 @@ export class UsersService {
   async updateRiotData(userId: string, data: RiotDataUpdate) {
     const user = await this.usersRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException(`User with id ${userId} not found`);
-    Object.assign(user, data);
+
+    user.riotPuuid = data.riotPuuid;
+    user.riotGameName = data.riotGameName;
+    user.riotTagLine = data.riotTagLine;
+    user.riotRegion = data.riotRegion;
+    user.soloTier = data.soloTier ?? '';
+    user.soloRank = data.soloRank ?? '';
+    user.soloLp = data.soloLp;
+    user.flexTier = data.flexTier ?? '';
+    user.flexRank = data.flexRank ?? '';
+    user.flexLp = data.flexLp;
+    user.rankPoints = data.rankPoints;
+    user.rankUpdatedAt = data.rankUpdatedAt;
+
     await this.usersRepository.save(user);
   }
 }

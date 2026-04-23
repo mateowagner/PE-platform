@@ -6,6 +6,7 @@
   padding: 2rem 1rem;
   position: relative;
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
 .auth-bg {
@@ -16,14 +17,14 @@
 
 .auth-bg-glow {
   position: absolute;
-  width: 700px;
-  height: 700px;
+  width: 600px;
+  height: 600px;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: radial-gradient(
     circle,
-    rgba(157, 78, 221, 0.08),
+    rgba(255, 107, 26, 0.06),
     transparent 65%
   );
   pointer-events: none;
@@ -38,7 +39,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 2.5rem;
-  box-shadow: 0 0 60px rgba(157, 78, 221, 0.1);
+  box-shadow: 0 0 60px rgba(255, 107, 26, 0.08);
 }
 
 .auth-card-header {
@@ -51,23 +52,19 @@
 }
 
 .auth-logo {
-  width: 64px;
-  height: 64px;
-  background: var(--violet-subtle);
-  border: 1px solid var(--border-active);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 0 20px var(--violet-glow);
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 15px rgba(255, 107, 26, 0.5));
+  margin-bottom: 0.25rem;
 }
 
 .auth-title {
   font-family: var(--font-display);
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-primary);
 }
 
@@ -82,22 +79,6 @@
   gap: 1.1rem;
 }
 
-.auth-error {
-  background: rgba(255, 68, 102, 0.1);
-  border: 1px solid rgba(255, 68, 102, 0.3);
-  border-radius: var(--radius-sm);
-  padding: 0.7rem 1rem;
-  font-size: 0.875rem;
-  color: var(--danger);
-}
-
-.btn-full {
-  width: 100%;
-  justify-content: center;
-  margin-top: 0.5rem;
-  padding: 0.8rem;
-}
-
 .auth-footer {
   margin-top: 1.5rem;
   text-align: center;
@@ -110,12 +91,12 @@
 }
 
 .auth-link {
-  color: var(--violet-bright);
+  color: var(--orange-bright);
   text-decoration: none;
   font-weight: 600;
   transition: color var(--transition);
 }
 
 .auth-link:hover {
-  color: var(--accent-cyan);
+  color: #ffaa44;
 }

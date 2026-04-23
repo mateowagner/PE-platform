@@ -18,8 +18,14 @@ interface AuthResult {
     email: string;
     role: string;
     riotGameName: string | null;
+    riotTagLine: string | null;
     riotRegion: string | null;
     soloTier: string | null;
+    soloRank: string | null;
+    soloLp: number;
+    flexTier: string | null;
+    flexRank: string | null;
+    flexLp: number;
     rankPoints: number;
   };
 }
@@ -114,8 +120,14 @@ export class AuthService {
         email: user!.email,
         role: user!.role,
         riotGameName: user!.riotGameName,
+        riotTagLine: user!.riotTagLine,
         riotRegion: user!.riotRegion,
         soloTier: user!.soloTier,
+        soloRank: user!.soloRank,
+        soloLp: user!.soloLp ?? 0,
+        flexTier: user!.flexTier,
+        flexRank: user!.flexRank,
+        flexLp: user!.flexLp ?? 0,
         rankPoints: user!.rankPoints,
       },
     };

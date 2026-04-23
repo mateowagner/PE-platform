@@ -5,9 +5,17 @@ interface User {
   id: string;
   username: string;
   email: string;
+  role: string;
   riotGameName?: string;
+  riotTagLine?: string;
   riotRegion?: string;
-  riotTier?: string;
+  soloTier?: string;
+  soloRank?: string;
+  soloLp?: number;
+  flexTier?: string;
+  flexRank?: string;
+  flexLp?: number;
+  rankPoints?: number;
   teamId?: string;
 }
 
