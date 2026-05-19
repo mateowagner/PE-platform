@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { TeamsModule } from './teams/teams.module';
 import { AuthModule } from './auth/auth.module';
 import { RiotModule } from './riot/riot.module';
+import { TeamInvitationsModule } from './team-invitations/team-invitations.module';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -44,6 +45,7 @@ import jwtConfig from './config/jwt.config';
     TeamsModule,
     AuthModule,
     RiotModule,
+    TeamInvitationsModule,
   ],
   providers: [
     {
