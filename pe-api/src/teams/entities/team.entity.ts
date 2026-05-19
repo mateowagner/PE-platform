@@ -7,8 +7,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { TeamInvitation } from '../../team-invitations/entities/team-invitation.entity'; // <-- No olvides importar
 
-@Entity()
+@Entity('teams') // 1. Nombre explícito y en plural para la DB
 export class Team {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -16,21 +17,31 @@ export class Team {
   @Column({ length: 50, unique: true })
   name!: string;
 
-  @Column({ nullable: true })
+  // En DB TypeORM lo llamará logoUrl (camel), si querés ser purista podés poner { name: 'logo_url' }
+  @Column({ name: 'logo_url', nullable: true })
   logoUrl!: string;
 
-  @Column({ default: 0 })
+  @Column({ name: 'total_rank_points', default: 0 })
   totalRankPoints!: number;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date;
+  // 2. camelCase en TypeScript, snake_case en la DB
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  createdAt!: Date;
 
   // Propietario del equipo
-  @ManyToOne(() => User, { eager: false, nullable: false })
-  @JoinColumn({ name: 'ownerId' })
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'owner_id' }) // 3. Forzamos snake_case para la FK en PostgreSQL
   owner!: User;
 
   // Miembros del equipo
   @OneToMany(() => User, (user) => user.team)
   members!: User[];
+
+  // 4. El vínculo bidireccional para acceder a las invitaciones emitidas por este equipo
+  @OneToMany(() => TeamInvitation, (invitation) => invitation.team)
+  invitations!: TeamInvitation[];
 }

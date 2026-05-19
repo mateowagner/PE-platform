@@ -3,10 +3,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Team } from '../../teams/entities/team.entity';
+import { TeamInvitation } from '../../team-invitations/entities/team-invitation.entity';
 
 export enum UserRole {
   USER = 'USER',
@@ -14,7 +16,7 @@ export enum UserRole {
   ADMIN = 'ADMIN',
 }
 
-@Entity()
+@Entity('users') // Nombre de la tabla en plural y minúscula
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
@@ -32,56 +34,66 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role!: UserRole;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ name: 'refresh_token_hash', nullable: true, type: 'text' })
   refreshTokenHash!: string | null;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  created_at!: Date;
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  createdAt!: Date;
 
   // ─── Riot Account ────────────────────────────────────────────────────────
 
-  @Column({ nullable: true, unique: true })
+  @Column({ name: 'riot_puuid', nullable: true, unique: true })
   riotPuuid!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'riot_game_name', nullable: true })
   riotGameName!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'riot_tag_line', nullable: true })
   riotTagLine!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'riot_region', nullable: true })
   riotRegion!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'solo_tier', nullable: true })
   soloTier!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'solo_rank', nullable: true })
   soloRank!: string;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ name: 'solo_lp', nullable: true, type: 'int' })
   soloLp!: number;
 
-  @Column({ nullable: true })
+  @Column({ name: 'flex_tier', nullable: true })
   flexTier!: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'flex_rank', nullable: true })
   flexRank!: string;
 
-  @Column({ nullable: true, type: 'int' })
+  @Column({ name: 'flex_lp', nullable: true, type: 'int' })
   flexLp!: number;
 
-  @Column({ default: 0, type: 'int' })
+  @Column({ name: 'rank_points', default: 0, type: 'int' })
   rankPoints!: number;
 
-  @Column({ nullable: true, type: 'timestamp' })
+  @Column({ name: 'rank_updated_at', nullable: true, type: 'timestamp' })
   rankUpdatedAt!: Date;
 
-  // ─── Team ────────────────────────────────────────────────────────────────
+  // ─── Team & Invitations ──────────────────────────────────────────────────
 
   @ManyToOne(() => Team, (team) => team.members, {
     eager: false,
     nullable: true,
   })
-  @JoinColumn({ name: 'teamId' })
+  @JoinColumn({ name: 'team_id' }) // Forzamos snake_case para la clave foránea
   team!: Team | null;
+
+  @OneToMany(() => TeamInvitation, (invitation) => invitation.adminInviter)
+  sentInvitations!: TeamInvitation[];
+
+  @OneToMany(() => TeamInvitation, (invitation) => invitation.userInvited)
+  receivedInvitations!: TeamInvitation[];
 }
