@@ -18,6 +18,7 @@ export class TeamInvitationsService {
   // Inyectamos el DataSource global para tener control absoluto de las conexiones
   constructor(
     private readonly dataSource: DataSource,
+    @InjectRepository(TeamInvitation)
     private readonly invitationRepository: Repository<TeamInvitation>,
     @InjectRepository(Team)
     private readonly teamRepository: Repository<Team>,
