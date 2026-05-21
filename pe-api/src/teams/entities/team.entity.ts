@@ -2,12 +2,17 @@ import {
   Column,
   Entity,
   JoinColumn,
+  ManyToMany,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { TeamInvitation } from '../../team-invitations/entities/team-invitation.entity'; // <-- No olvides importar
+import {
+  SkillTier,
+  Tournament,
+} from '../../tournaments/entities/tournament.entity';
 
 @Entity('teams') // 1. Nombre explícito y en plural para la DB
 export class Team {
@@ -44,4 +49,14 @@ export class Team {
   // 4. El vínculo bidireccional para acceder a las invitaciones emitidas por este equipo
   @OneToMany(() => TeamInvitation, (invitation) => invitation.team)
   invitations!: TeamInvitation[];
+
+  @ManyToMany(() => Tournament, (tournament) => tournament.teams)
+  tournaments!: Tournament[];
+
+  @Column({
+    type: 'enum',
+    enum: SkillTier,
+    nullable: true, // Ojo con este detalle
+  })
+  skill_tier?: SkillTier;
 }
