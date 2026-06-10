@@ -8,7 +8,7 @@ import TournamentsPage from "./pages/TournamentsPage";
 import TeamPage from "./pages/TeamPage";
 import AccountPage from "./pages/AccountPage";
 import Navbar from "./components/layout/Navbar";
-
+import TournamentDetailPage from "./pages/TournamentDetailPage";
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
@@ -75,6 +75,16 @@ export default function App() {
             <ProtectedRoute>
               <AppLayout>
                 <TournamentsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tournaments/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <TournamentDetailPage />
               </AppLayout>
             </ProtectedRoute>
           }

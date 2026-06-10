@@ -143,3 +143,18 @@
   color: var(--text-primary);
   letter-spacing: 0.04em;
 }
+.navbar-bell-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.25rem; /* Separación sutil antes del bloque de usuario */
+}
+
+/* Ajuste opcional para mejorar la animación de entrada de los elementos del navbar */
+.navbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  height: 100%; /* Vincula la altura al contenedor flex principal */
+}

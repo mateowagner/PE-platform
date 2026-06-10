@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import "./Navbar.css";
+import NotificationBell from "../NotificationBell";
 
 export default function Navbar() {
   const { user, logout } = useAuthStore();
@@ -55,7 +56,13 @@ export default function Navbar() {
           </a>
         </div>
 
+        {/* Bloque de Usuario del extremo derecho */}
         <div className="navbar-user">
+          {/* --- LA CAMPANITA CLAVADA JUSTO ACÁ --- */}
+          <div className="navbar-bell-container">
+            <NotificationBell />
+          </div>
+
           <div className="user-chip">
             <div className="user-avatar">
               {user?.username?.charAt(0).toUpperCase() ?? "U"}
