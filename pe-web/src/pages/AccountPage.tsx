@@ -4,6 +4,8 @@ import { useApi } from "../hooks/useApi";
 import "./AccountPage.css";
 
 const RANK_EMBLEMS: Record<string, string> = {
+  UNRANKED:
+    "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/unranked.png",
   IRON: "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/iron.png",
   BRONZE:
     "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/bronze.png",
@@ -25,6 +27,7 @@ const RANK_EMBLEMS: Record<string, string> = {
 };
 
 const TIER_NAMES: Record<string, string> = {
+  UNRANKED: "Sin clasificar",
   IRON: "Hierro",
   BRONZE: "Bronce",
   SILVER: "Plata",
