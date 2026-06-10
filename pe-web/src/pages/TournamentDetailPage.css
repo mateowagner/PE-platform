@@ -1,0 +1,443 @@
+/* ==========================================================================
+   TOURNAMENT DETAIL & HLTV COMPETITION STYLES
+   ========================================================================== */
+
+.tournament-details-page {
+  padding-bottom: 4rem;
+}
+
+.tournament-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--text-muted, #a0aec0);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+.btn-back:hover {
+  color: #fff;
+}
+
+.btn-test-fixture {
+  background: transparent;
+  border: 1px dashed var(--primary, #8b5cf6);
+  color: var(--primary);
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-test-fixture:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Layout Pre-Torneo (Inscripciones) */
+.tournament-grid-layout {
+  display: grid;
+  grid-template-columns: 1.8fr 1.2fr;
+  gap: 2rem;
+}
+.tournament-main-card,
+.tournament-sidebar {
+  background: var(--bg-card, #141923);
+  border: 1px solid var(--border-subtle, #222b3c);
+  border-radius: 6px;
+  padding: 2rem;
+}
+
+.info-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid #222b3c;
+  border-bottom: 1px solid #222b3c;
+  margin: 1.5rem 0;
+}
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.meta-item label {
+  display: block;
+  font-size: 0.8rem;
+  color: #718096;
+}
+.meta-item span {
+  font-weight: 600;
+  color: #fff;
+}
+.fee-text {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.participant-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+.participant-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+/* Workspace Competitiva Ancha */
+.layout-competition-view {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 1rem 2rem;
+}
+.competition-minimal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111622;
+  border: 1px solid #222b3c;
+  padding: 1.25rem 2rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+.comp-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0;
+}
+.comp-subtitle {
+  font-size: 0.8rem;
+  color: #718096;
+  margin: 0.25rem 0 0 0;
+  text-transform: uppercase;
+}
+.highlight-purple {
+  color: var(--primary);
+  font-weight: 700;
+}
+.comp-mini-stats {
+  display: flex;
+  gap: 0.75rem;
+}
+.mini-stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  border: 1px solid #222b3c;
+}
+
+/* ==========================================================================
+   HLTV STYLE STAGE SELECTOR (MENÚ SUPERIOR DE BOTONES)
+   ========================================================================== */
+.hltv-stage-container {
+  background: #111622;
+  border: 1px solid #222b3c;
+  padding: 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 2rem;
+}
+.hltv-stage-selector-bar {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+.hltv-stage-btn {
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition: all 0.2s ease;
+}
+.hltv-stage-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+}
+.hltv-stage-active {
+  background: #222b3c !important;
+  color: var(--primary) !important;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+/* ==========================================================================
+   HLTV MATCH CARD DESIGN (GRILLA DE SERIES)
+   ========================================================================== */
+.hltv-series-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.hltv-match-card-wrapper {
+  background: #161c28;
+  border: 1px solid #222b3c;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.hltv-match-card-wrapper:hover {
+  transform: translateY(-2px);
+  border-color: #4a5568;
+}
+
+.hltv-card-top-meta {
+  background: #111520;
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #222b3c;
+}
+.hltv-series-format-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #718096;
+  letter-spacing: 0.03em;
+}
+
+.hltv-status-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #a0aec0;
+}
+.hltv-live-indicator {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  letter-spacing: 0.05em;
+}
+.live-dot {
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: hltvPulse 1.2s infinite;
+}
+
+@keyframes hltvPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+.hltv-card-teams-block {
+  padding: 0.5rem 0;
+}
+.hltv-team-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  color: #a0aec0;
+}
+.hltv-team-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.hltv-team-logo-placeholder {
+  width: 24px;
+  height: 24px;
+  background: #1f2736;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  color: #fff;
+}
+.hltv-team-name-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hltv-team-score-num {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.hltv-row-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.hltv-row-winner {
+  color: #fff !important;
+  background: rgba(16, 185, 129, 0.03);
+  border-left: 3px solid #10b981;
+  padding-left: calc(1rem - 3px);
+}
+.hltv-row-winner .hltv-team-score-num {
+  color: #10b981;
+}
+
+.hltv-card-live-border {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
+}
+
+.hltv-card-footer-action {
+  background: #111520;
+  padding: 0.4rem 1rem;
+  border-top: 1px solid #222b3c;
+  text-align: center;
+}
+.hltv-action-text {
+  font-size: 0.75rem;
+  color: #718096;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.hltv-match-card-wrapper:hover .hltv-action-text {
+  color: var(--primary);
+}
+
+/* ==========================================================================
+   CUP BRACKET MIRROR LAYOUT (MULTI-RONDA ELÁSTICO)
+   ========================================================================== */
+.bracket-viewport {
+  width: 100%;
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+
+.cup-mirror-elastic-grid {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+  min-width: 1250px;
+  padding: 2.5rem 1.5rem;
+  background: #0f131c;
+  border: 1px solid #222b3c;
+  border-radius: 8px;
+  box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.6);
+}
+
+.cup-elastic-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+}
+
+.cup-stage-title {
+  font-size: 0.75rem;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.branch-center-highlight {
+  background: rgba(139, 92, 246, 0.02);
+  border-left: 1px dashed rgba(139, 92, 246, 0.15);
+  border-right: 1px dashed rgba(139, 92, 246, 0.15);
+  padding: 2rem 1rem;
+  border-radius: 6px;
+}
+
+.grand-final-title {
+  color: #f59e0b !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+  background: rgba(245, 158, 11, 0.03) !important;
+}
+
+.trophy-cup-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.gold-glow-icon {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.3));
+}
+
+.matches-column-flow {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex-grow: 1;
+  gap: 2rem;
+}
+
+.empty-card {
+  border: 1px dashed #222b3c;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 2rem 1rem;
+  color: #4a5568;
+  font-size: 0.85rem;
+  text-align: center;
+  font-weight: 600;
+  text-transform: uppercase;
+}
