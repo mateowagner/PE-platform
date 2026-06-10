@@ -87,6 +87,7 @@ export class User {
   @ManyToOne(() => Team, (team) => team.members, {
     eager: false,
     nullable: true,
+    onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'team_id' }) // Forzamos snake_case para la clave foránea
   team!: Team | null;

@@ -9,7 +9,7 @@ import { Team } from './entities/team.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
-
+import { ForbiddenException, BadRequestException } from '@nestjs/common';
 @Injectable()
 export class TeamsService {
   constructor(
@@ -89,5 +89,83 @@ export class TeamsService {
     });
     if (!team) throw new NotFoundException(`Team with id ${id} not found`);
     return team.members;
+  }
+  async removeMember(
+    teamId: string,
+    captainId: string,
+    memberId: string,
+  ): Promise<Team> {
+    // 1. Obtener el equipo con su dueño y sus miembros
+    const team = await this.teamsRepository.findOne({
+      where: { id: teamId },
+      relations: ['owner', 'members'],
+    });
+
+    if (!team) {
+      throw new NotFoundException('El equipo especificado no existe.');
+    }
+
+    // 2. VALIDACIÓN: Solo el capitán puede echar gente
+    if (team.owner.id !== captainId) {
+      throw new ForbiddenException(
+        'Operación denegada. Solo el capitán puede remover miembros.',
+      );
+    }
+
+    // 3. VALIDACIÓN: El capitán no puede echarse a sí mismo
+    if (memberId === captainId) {
+      throw new BadRequestException(
+        'No puedes eliminarte a ti mismo del equipo. Utiliza la opción de salir.',
+      );
+    }
+
+    // 4. VALIDACIÓN: Verificar que el usuario realmente pertenezca al equipo
+    const memberIndex = team.members.findIndex((m) => m.id === memberId);
+    if (memberIndex === -1) {
+      throw new BadRequestException(
+        'El jugador especificado no pertenece a este equipo.',
+      );
+    }
+
+    // 5. Romper la relación: sacamos al miembro del arreglo del equipo
+    team.members.splice(memberIndex, 1);
+
+    // 6. Guardamos el equipo actualizado y lo retornamos para refrescar el front
+    return await this.teamsRepository.save(team);
+  }
+  async leaveTeam(userId: string): Promise<void> {
+    // 1. Buscar al usuario con su relación de equipo
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      relations: ['team'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('El usuario no existe.');
+    }
+
+    // 2. VALIDACIÓN: Verificar si realmente tiene un equipo
+    if (!user.team) {
+      throw new BadRequestException(
+        'No perteneces a ningún equipo actualmente.',
+      );
+    }
+
+    // 3. Obtener el equipo para chequear el dueño
+    const team = await this.teamsRepository.findOne({
+      where: { id: user.team.id },
+      relations: ['owner'],
+    });
+
+    // 4. VALIDACIÓN CRÍTICA: El capitán no puede usar este flujo
+    if (team && team.owner.id === userId) {
+      throw new BadRequestException(
+        'Como capitán, no podés abandonar el equipo directamente. Debés transferir el liderazgo o disolver el equipo.',
+      );
+    }
+
+    // 5. Romper la relación sacando el equipo del usuario
+    user.team = null;
+    await this.usersRepository.save(user);
   }
 }

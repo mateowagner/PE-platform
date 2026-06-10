@@ -10,6 +10,7 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { TeamsService } from './teams.service';
@@ -66,5 +67,19 @@ export class TeamsController {
   @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string) {
     return this.teamsService.remove(id);
+  }
+  @Delete(':teamId/members/:memberId')
+  @UseGuards(JwtAuthGuard)
+  async removeMember(
+    @Param('teamId', ParseUUIDPipe) teamId: string,
+    @Param('memberId', ParseUUIDPipe) memberId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return await this.teamsService.removeMember(teamId, req.user.id, memberId);
+  }
+  @Post('leave')
+  @UseGuards(JwtAuthGuard)
+  leaveTeam(@Req() req: AuthenticatedRequest) {
+    return this.teamsService.leaveTeam(req.user.id);
   }
 }

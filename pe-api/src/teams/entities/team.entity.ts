@@ -50,7 +50,10 @@ export class Team {
   @OneToMany(() => TeamInvitation, (invitation) => invitation.team)
   invitations!: TeamInvitation[];
 
-  @ManyToMany(() => Tournament, (tournament) => tournament.teams)
+  @ManyToMany(() => Tournament, (tournament) => tournament.teams, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   tournaments!: Tournament[];
 
   @Column({

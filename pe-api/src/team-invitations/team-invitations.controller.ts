@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Param,
   UseGuards,
   Req,
@@ -42,7 +43,7 @@ export class TeamInvitationsController {
       message: 'Invitación aceptada. Te has unido al equipo exitosamente.',
     };
   }
-  @Post()
+  @Post(':teamId')
   @UseGuards(JwtAuthGuard)
   async sendInvitation(
     @Param('teamId', ParseUUIDPipe) teamId: string,
@@ -80,4 +81,18 @@ export class TeamInvitationsController {
       message: 'Has rechazado la invitación exitosamente.',
     };
   }
+  @Get('pending-invitations')
+  @UseGuards(JwtAuthGuard)
+  async getMyInvitations(@Req() req: AuthenticatedRequest) {
+    const invitations =
+      await this.teamInvitationsService.getInvitationsByUserId(req.user.id);
+    return { invitations };
+  }
+  /*@Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async getInvitation(@Param('id', ParseUUIDPipe) invitationId: string) {
+    const invitation =
+      await this.teamInvitationsService.getInvitationById(invitationId);
+    return { invitation };
+  }*/
 }

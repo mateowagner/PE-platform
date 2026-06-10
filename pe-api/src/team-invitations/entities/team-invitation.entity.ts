@@ -48,7 +48,6 @@ export class TeamInvitation {
   })
   expiresAt!: Date;
 
-  // 4. Relaciones corregidas (objetos únicos, no arrays) y con JoinColumn explícito
   @ManyToOne(() => Team, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'team_id' })
   team!: Team;

@@ -106,7 +106,7 @@ export class TeamInvitationsService {
     try {
       // --- PASO A: Validar Invitación ---
       const invitation = await queryRunner.manager.findOne(TeamInvitation, {
-        where: { id: invitationId },
+        where: { id: invitationId, status: InvitationStatus.PENDING },
         relations: ['userInvited', 'team'],
       });
 
@@ -120,11 +120,11 @@ export class TeamInvitationsService {
         );
       }
 
-      if (invitation.status !== InvitationStatus.PENDING) {
+      /*if (invitation.status !== InvitationStatus.PENDING) {
         throw new ConflictException(
           `La invitación ya no está pendiente (Estado: ${invitation.status}).`,
         );
-      }
+      }*/
 
       if (new Date() > invitation.expiresAt) {
         // Podríamos actualizar el estado a EXPIRED acá mismo, pero por SRP
@@ -136,31 +136,35 @@ export class TeamInvitationsService {
       // Bloqueamos la fila del usuario por seguridad
       const user = await queryRunner.manager.findOne(User, {
         where: { id: userId },
-        relations: ['team'],
+        //relations: ['team'],
         lock: { mode: 'pessimistic_write' },
       });
       if (!user) {
         throw new NotFoundException('El usuario no existe.');
       }
+
       if (user.team) {
         throw new ConflictException(
           'Ya perteneces a un equipo. Debes salir de tu equipo actual primero.',
         );
       }
-
       // --- PASO C: Validar Cupo de Equipo (El Lock crítico) ---
       // Secuestramos la fila del equipo para evitar Condiciones de Carrera
+
       const team = await queryRunner.manager.findOne(Team, {
         where: { id: invitation.team.id },
-        relations: ['members'],
+        //relations: ['members'],
         lock: { mode: 'pessimistic_write' },
       });
 
       if (!team) {
         throw new NotFoundException('El equipo no existe.');
       }
-
-      if (team.members.length >= 7) {
+      const teamMembersCount = await queryRunner.manager.count(User, {
+        where: { team: { id: invitation.team.id } },
+        //lock: { mode: 'pessimistic_write' },
+      });
+      if (teamMembersCount >= 7) {
         throw new ConflictException(
           'El equipo ya ha alcanzado el límite máximo de 7 jugadores.',
         );
@@ -169,6 +173,7 @@ export class TeamInvitationsService {
       // --- PASO D: Ejecutar Mutaciones ---
       // 1. Asignar el equipo al usuario
       user.team = team;
+
       await queryRunner.manager.save(User, user);
 
       // 2. Cambiar el estado de la invitación
@@ -191,7 +196,7 @@ export class TeamInvitationsService {
   async rejectInvitation(userId: string, invitationId: string): Promise<void> {
     // 1. Buscar la invitación (con la relación del jugador para validar autoría)
     const invitation = await this.invitationRepository.findOne({
-      where: { id: invitationId },
+      where: { id: invitationId, status: InvitationStatus.PENDING },
       relations: ['userInvited'],
     });
 
@@ -208,11 +213,11 @@ export class TeamInvitationsService {
     }
 
     // 4. Validar estado PENDING
-    if (invitation.status !== InvitationStatus.PENDING) {
+    /*if (invitation.status !== InvitationStatus.PENDING) {
       throw new ConflictException(
         `La invitación ya no está pendiente (Estado: ${invitation.status}).`,
       );
-    }
+    }*/
 
     // 5. Validar que no esté expirada
     if (new Date() > invitation.expiresAt) {
@@ -222,5 +227,22 @@ export class TeamInvitationsService {
     // 6. Ejecutar la mutación
     invitation.status = InvitationStatus.REJECTED;
     await this.invitationRepository.save(invitation);
+  }
+  async getInvitationById(invitationId: string): Promise<TeamInvitation> {
+    const invitation = await this.invitationRepository.findOne({
+      where: { id: invitationId },
+      relations: ['team', 'adminInviter', 'userInvited'],
+    });
+    if (!invitation) {
+      throw new NotFoundException('La invitación no existe.');
+    }
+    return invitation;
+  }
+  async getInvitationsByUserId(userId: string): Promise<TeamInvitation[]> {
+    return await this.invitationRepository.find({
+      where: { userInvited: { id: userId }, status: InvitationStatus.PENDING },
+      relations: ['team', 'userInvited'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }
