@@ -49,6 +49,13 @@ export class SeriesService {
     return series;
   }
 
+  async findByTournament(tournamentId: string): Promise<TournamentSeries[]> {
+    return await this.seriesRepository.find({
+      where: { tournament: { id: tournamentId } },
+      relations: ['tournament', 'team_a', 'team_b', 'winner'],
+    });
+  }
+
   async update(
     id: string,
     updateData: Partial<TournamentSeries>,

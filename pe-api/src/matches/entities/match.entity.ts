@@ -40,7 +40,7 @@ export class Match {
   @JoinColumn({ name: 'series_id' })
   series!: TournamentSeries;
 
-  @ManyToOne(() => Team, { nullable: true })
+  @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'winner_id' })
   winner?: Team; // El equipo que destruyó el nexo
 }

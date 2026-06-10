@@ -25,19 +25,19 @@ export class TournamentSeries {
   id!: string;
 
   // --- RELACIONES ESTRUCTURALES ---
-  @ManyToOne(() => Tournament)
+  @ManyToOne(() => Tournament, { onDelete: 'CASCADE' }) // <-- Agregamos el cascade delete acá
   @JoinColumn({ name: 'tournament_id' })
   tournament!: Tournament;
 
-  @ManyToOne(() => Team, { nullable: true })
+  @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'team_a_id' })
   team_a?: Team; // Nullable para esperar clasificados en rondas avanzadas
 
-  @ManyToOne(() => Team, { nullable: true })
+  @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'team_b_id' })
   team_b?: Team;
 
-  @ManyToOne(() => Team, { nullable: true })
+  @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'winner_id' })
   winner?: Team; // Se setea automáticamente al finalizar la serie
 

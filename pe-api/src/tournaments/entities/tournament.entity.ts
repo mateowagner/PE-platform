@@ -94,7 +94,7 @@ export class Tournament {
 
   // --- RELACIONES ---
 
-  @ManyToMany(() => Team, (team) => team.tournaments)
+  @ManyToMany(() => Team, (team) => team.tournaments, {})
   @JoinTable({
     name: 'tournament_participants',
     joinColumn: { name: 'tournament_id', referencedColumnName: 'id' },
@@ -105,7 +105,7 @@ export class Tournament {
   @ManyToOne(() => Team, { nullable: true })
   winner?: Team;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
   created_by!: User;
 
   @OneToMany(() => TournamentSeries, (series) => series.tournament)

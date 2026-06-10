@@ -38,16 +38,17 @@ export interface RiotRankData {
 // ─── Tabla de puntos según reglamento (sección 2.2) ─────────────────────────
 
 const TIER_BASE_POINTS: Record<string, number> = {
+  UNRANKED: 0,
   IRON: 0,
-  BRONZE: 0,
-  SILVER: 0, // IV-III = 0, II-I = 1 (se ajusta por rank abajo)
-  GOLD: 2, // IV-III = 2, II-I = 3
+  BRONZE: 1,
+  SILVER: 2, // IV-III = 0, II-I = 1 (se ajusta por rank abajo)
+  GOLD: 3, // IV-III = 2, II-I = 3
   PLATINUM: 4, // IV-III = 4, II-I = 5
-  EMERALD: 6, // IV-III = 6, II-I = 7
-  DIAMOND: 8, // IV-III = 8, II = 9, I = 10
-  MASTER: 11,
-  GRANDMASTER: 11,
-  CHALLENGER: 11,
+  EMERALD: 5, // IV-III = 6, II-I = 7
+  DIAMOND: 6, // IV-III = 8, II = 9, I = 10
+  MASTER: 7,
+  GRANDMASTER: 8,
+  CHALLENGER: 9,
 };
 
 function calculateRankPoints(
@@ -57,24 +58,7 @@ function calculateRankPoints(
 ): number {
   if (!tier) return 0;
 
-  const base = TIER_BASE_POINTS[tier] ?? 0;
-
-  // Master+ suma 1 punto por cada 100 LP adicionales
-  if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier)) {
-    return base + Math.floor(lp / 100);
-  }
-
-  // Silver II-I suma 1 punto sobre la base de 0
-  // Gold II-I suma 1 punto sobre la base de 2
-  // Platinum II-I suma 1 punto sobre la base de 4
-  // Emerald II-I suma 1 punto sobre la base de 6
-  if (rank === 'II' || rank === 'I') {
-    // Diamond tiene escala distinta: II=9, I=10
-    if (tier === 'DIAMOND') {
-      return rank === 'I' ? 10 : 9;
-    }
-    return base + 1;
-  }
+  const base = TIER_BASE_POINTS[tier] ?? 0 + (rank === 'I' ? 0 : 0) + lp * 0;
 
   return base;
 }
@@ -130,11 +114,11 @@ export class RiotService {
       gameName,
       tagLine,
       summonerLevel: 0,
-      soloTier: solo?.tier ?? null,
-      soloRank: solo?.rank ?? null,
+      soloTier: solo?.tier ?? 'UNRANKED',
+      soloRank: solo?.rank ?? '-',
       soloLp: solo?.leaguePoints ?? 0,
-      flexTier: flex?.tier ?? null,
-      flexRank: flex?.rank ?? null,
+      flexTier: flex?.tier ?? 'UNRANKED',
+      flexRank: flex?.rank ?? '-',
       flexLp: flex?.leaguePoints ?? 0,
       rankPoints: Math.max(soloPoints, flexPoints),
     };
