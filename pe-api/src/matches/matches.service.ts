@@ -1,72 +1,82 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Match, MatchStatus } from './entities/match.entity';
-import {
-  TournamentSeries,
-  SeriesStatus,
-} from '../series/entities/series.entity';
+import { Serie, SeriesStatus } from '../series/entities/series.entity';
 import { Team } from '../teams/entities/team.entity';
+import { WebhookRiotDto } from './dto/update-match-webhook.dto';
 
 @Injectable()
 export class MatchesService {
   constructor(
     @InjectRepository(Match)
     private readonly matchRepository: Repository<Match>,
-    @InjectRepository(TournamentSeries)
-    private readonly seriesRepository: Repository<TournamentSeries>,
+    @InjectRepository(Serie)
+    private readonly seriesRepository: Repository<Serie>,
   ) {}
 
-  async reportMatchResult(
-    matchId: string,
-    riotMatchId: string,
-    winnerTeamId: string,
-    stats: Record<string, any>,
+  async processRiotWebhook(
+    data: WebhookRiotDto,
   ): Promise<Match | { message: string }> {
-    // 1. Buscamos el partido trayendo la serie padre y los equipos involucrados
+    const matchId = data.metaData; // Extraemos el UUID validado
+
+    // 1. Buscamos el partido trayendo la serie y a los JUGADORES de cada equipo
     const match = await this.matchRepository.findOne({
       where: { id: matchId },
-      relations: ['series', 'series.team_a', 'series.team_b'],
+      relations: [
+        'series',
+        'series.team_a',
+        'series.team_a.members',
+        'series.team_b',
+        'series.team_b.members',
+      ],
     });
 
     if (!match) {
-      throw new NotFoundException('El mapa especificado no existe.');
-    }
-
-    // --- PROTECCIÓN CONTRA DOBLE WEBHOOK ---
-    if (match.status === MatchStatus.FINISHED) {
-      // Devolvemos un 200 silencioso para que el webhook no siga insistiendo
-      return { message: 'Este mapa ya fue procesado y cerrado previamente.' };
-    }
-
-    // 2. Actualizamos el mapa individual
-    match.status = MatchStatus.FINISHED;
-    match.riot_match_id = riotMatchId;
-    match.stats = stats;
-    match.winner = { id: winnerTeamId } as Team;
-
-    await this.matchRepository.save(match);
-
-    // 3. Actualizamos los contadores de la Serie
-    const series = match.series;
-    let isSeriesFinished = false;
-
-    // Verificamos quién ganó y sumamos el punto
-    if (series.team_a && series.team_a.id === winnerTeamId) {
-      series.team_a_wins += 1;
-    } else if (series.team_b && series.team_b.id === winnerTeamId) {
-      series.team_b_wins += 1;
-    } else {
-      throw new BadRequestException(
-        'El equipo ganador no pertenece a esta serie.',
+      throw new NotFoundException(
+        'El mapa especificado en la metadata no existe.',
       );
     }
 
+    if (match.status === MatchStatus.FINISHED) {
+      return { message: 'Este mapa ya fue procesado.' };
+    }
+
+    // 2. DEDUCIR EL EQUIPO GANADOR
+    // Tomamos un jugador de los que Riot nos dice que ganaron
+    const riotWinnerName = data.winningTeam[0].summonerName.toLowerCase();
+
+    let winnerTeamId: string | null = null;
+    const series = match.series;
+
+    // Buscamos si ese jugador está en el roster del team_a
+    const isTeamAWinner = series.team_a?.members.some(
+      (m) => m.riotGameName?.toLowerCase() === riotWinnerName, // Ajustá 'riot_summoner_name' al campo real de tu UserEntity
+    );
+
+    if (isTeamAWinner && series.team_a) {
+      winnerTeamId = series.team_a.id;
+      series.team_a_wins += 1;
+    } else if (series.team_b) {
+      winnerTeamId = series.team_b.id;
+      series.team_b_wins += 1;
+    }
+
+    // 3. Actualizamos el mapa individual con los datos reales de Riot
+    match.status = MatchStatus.FINISHED;
+    match.riot_match_id = data.gameId.toString();
+    match.start_date = new Date(data.startTime);
+    match.end_date = new Date(); // El momento exacto en que llega el webhook
+    match.winner = { id: winnerTeamId } as Team;
+
+    // Guardamos el JSON crudo por si queremos sacar KDA o oro después
+    match.stats = { winningTeamInfo: data.winningTeam };
+
+    await this.matchRepository.save(match);
+
     // 4. Chequeamos si la serie llegó a su fin (BO3, BO5, etc.)
+    let isSeriesFinished = false;
+
     if (series.team_a_wins >= series.wins_required) {
       series.status = SeriesStatus.COMPLETED;
       series.winner = series.team_a;
@@ -77,7 +87,6 @@ export class MatchesService {
       isSeriesFinished = true;
     }
 
-    // Guardamos los cambios en la serie
     await this.seriesRepository.save(series);
 
     // 5. Limpieza de base de datos (Mapas Fantasmas)

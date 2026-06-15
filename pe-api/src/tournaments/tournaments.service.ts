@@ -6,20 +6,14 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, Repository } from 'typeorm';
-import {
-  Tournament,
-  TournamentStatus,
-  TournamentType,
-} from './entities/tournament.entity';
+import { Tournament, TournamentStatus } from './entities/tournament.entity';
 import { Team } from '../teams/entities/team.entity';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { Request } from 'express';
 import { User } from '../users/entities/user.entity';
-import {
-  TournamentSeries,
-  SeriesStatus,
-  SeriesSlot,
-} from '../series/entities/series.entity'; // Ajustá el path según tu proyecto
+import { Serie, SeriesStatus } from '../series/entities/series.entity'; // Ajustá el path según tu proyecto
+import { RiotService } from '../riot/riot.service';
+import { Match, MatchStatus } from '../matches/entities/match.entity';
 @Injectable()
 export class TournamentsService {
   constructor(
@@ -28,6 +22,14 @@ export class TournamentsService {
     @InjectRepository(Team)
     private readonly teamRepository: Repository<Team>,
     private readonly dataSource: DataSource,
+    @InjectRepository(Match)
+    private readonly matchRepository: Repository<Match>,
+
+    // ➔ AGREGAR ESTA LÍNEA:
+    @InjectRepository(Serie)
+    private readonly seriesRepository: Repository<Serie>,
+
+    private readonly riotService: RiotService,
   ) {}
   async getTournamentDetails(id: string): Promise<unknown> {
     const tournament = await this.tournamentRepository.findOne({
@@ -304,8 +306,8 @@ export class TournamentsService {
     const tournament = await this.findOne(id);
     await this.tournamentRepository.remove(tournament);
   }
-  async getTournamentSeries(tournamentId: string): Promise<TournamentSeries[]> {
-    return await this.dataSource.getRepository(TournamentSeries).find({
+  async getTournamentSeries(tournamentId: string): Promise<Serie[]> {
+    return await this.dataSource.getRepository(Serie).find({
       where: { tournament: { id: tournamentId } },
       relations: ['team_a', 'team_b', 'winner'],
       // FIX 1: Quitamos createdAt ya que no está tipado en el FindOptionsOrder de esta entidad
@@ -313,182 +315,99 @@ export class TournamentsService {
     });
   }
 
-  async generateFixture(tournamentId: string): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  async generateFixture(tournamentId: string): Promise<Tournament> {
+    // 1. Validar el torneo y sus configuraciones de Riot
+    const tournament = await this.tournamentRepository.findOne({
+      where: { id: tournamentId },
+      relations: ['teams'], // Traemos los equipos inscritos
+    });
 
-    try {
-      const tournament = await queryRunner.manager.findOne(Tournament, {
-        where: { id: tournamentId },
-        lock: { mode: 'pessimistic_write' },
+    if (!tournament) {
+      throw new NotFoundException('El torneo especificado no existe.');
+    }
+
+    if (tournament.status !== TournamentStatus.PREPARING) {
+      throw new BadRequestException(
+        'El fixture ya fue generado o el torneo ya comenzó.',
+      );
+    }
+
+    if (!tournament.riot_tournament_id) {
+      throw new BadRequestException(
+        'El torneo debe estar registrado previamente en Riot (falta riot_tournament_id).',
+      );
+    }
+
+    const teams = tournament.teams;
+    if (teams.length < 2) {
+      throw new BadRequestException(
+        'Se necesitan al menos 2 equipos para generar el fixture.',
+      );
+    }
+
+    // 2. CALCULAR EL TOTAL DE MAPAS (MATCHES) MÁXIMOS NECESARIOS
+    // Para eliminación directa: N equipos requieren (N - 1) enfrentamientos globales (series).
+    // Si cada serie es al Mejor de 3 (BO3), el máximo de mapas por serie es 3.
+    const winsRequired = 2; // BO3 (gana el primero que llega a 2)
+    const maxMapsPerSeries = winsRequired * 2 - 1; // 3 mapas
+    const totalSeries = teams.length - 1;
+    const totalMatchesNeeded = totalSeries * maxMapsPerSeries;
+
+    // 3. PEDIR EL LOTE MASIVO DE CÓDIGOS A RIOT GAMES
+    // Hacemos una única llamada asíncrona para traer todos los códigos que usará el torneo
+    const riotCodes = await this.riotService.generateTournamentCodes(
+      Number(tournament.riot_tournament_id),
+      totalMatchesNeeded,
+      tournament.map_type,
+      tournament.pick_type,
+    );
+
+    // 4. CREAR LAS LLAVES DE LA PRIMERA RONDA
+    // Iteramos los equipos de a pares para armar los cruces iniciales
+    for (let i = 0; i < teams.length; i += 2) {
+      const teamA = teams[i];
+      const teamB = teams[i + 1] ?? null; // Manejo por si hay número impar de equipos (BYE)
+
+      // Instanciamos la serie (Enfrentamiento global)
+      const series = this.seriesRepository.create({
+        tournament,
+        team_a: teamA,
+        team_b: teamB,
+        wins_required: winsRequired,
+        team_a_wins: 0,
+        team_b_wins: 0,
+        status: SeriesStatus.PENDING,
       });
 
-      if (!tournament) {
-        throw new NotFoundException('El torneo no existe.');
+      const savedSeries = await this.seriesRepository.save(series);
+
+      // Si no hay rival (teamB es null), el equipo A avanza automáticamente y no se crean mapas
+      if (!teamB) {
+        savedSeries.status = SeriesStatus.COMPLETED;
+        savedSeries.winner = teamA;
+        await this.seriesRepository.save(savedSeries);
+        continue;
       }
 
-      if (tournament.status !== TournamentStatus.PREPARING) {
-        throw new BadRequestException('El fixture ya fue generado.');
+      // 5. GENERAR LOS MAPAS INDIVIDUALES (MATCHES) Y REPARTIR LOS CÓDIGOS
+      for (let j = 1; j <= maxMapsPerSeries; j++) {
+        // Extraemos el primer código disponible del mazo
+        const uniqueCode = riotCodes.shift();
+
+        const match = this.matchRepository.create({
+          series: savedSeries,
+          match_order: j,
+          status: MatchStatus.CREATED,
+          tournament_code: uniqueCode, // Asignamos el código único de Riot a la columna
+        });
+
+        await this.matchRepository.save(match);
       }
-
-      const teams = await queryRunner.manager
-        .createQueryBuilder(Team, 'team')
-        .innerJoin('team.tournaments', 'tournament', 'tournament.id = :id', {
-          id: tournamentId,
-        })
-        .getMany();
-
-      if (teams.length < 2) {
-        throw new BadRequestException(
-          'Se necesitan al menos 2 equipos para generar el fixture.',
-        );
-      }
-
-      // ==========================================================================
-      // ALGORITMO LIGA (ROUND ROBIN)
-      // ==========================================================================
-      if (tournament.type === TournamentType.LEAGUE) {
-        const list = [...teams];
-        // FIX 3: Cambiamos 'null as any' por 'null as unknown as Team' para pasar el control de ESLint
-        if (list.length % 2 !== 0) list.push(null as unknown as Team);
-
-        const numTeams = list.length;
-        const numRounds = numTeams - 1;
-        const matchesPerRound = numTeams / 2;
-
-        for (let round = 0; round < numRounds; round++) {
-          const stageName = `Fecha ${round + 1}`;
-
-          for (let match = 0; match < matchesPerRound; match++) {
-            const home = (round + match) % (numTeams - 1);
-            const away = (numTeams - 1 - match + round) % (numTeams - 1);
-
-            const teamA = match === 0 ? list[numTeams - 1] : list[home];
-            const teamB = list[away];
-
-            if (teamA === null || teamB === null) continue; // Descansa por impar
-
-            const series = queryRunner.manager.create(TournamentSeries, {
-              tournament,
-              stage_name: stageName,
-              round_order: round + 1,
-              team_a: teamA,
-              team_b: teamB,
-              status: SeriesStatus.PENDING,
-              wins_required: 2,
-            });
-            await queryRunner.manager.save(TournamentSeries, series);
-          }
-        }
-        tournament.current_stage = 'Fecha 1';
-      }
-
-      // ==========================================================================
-      // ALGORITMO COPA (ÁRBOL BINARIO ENLAZADO DESDE LA FINAL)
-      // ==========================================================================
-      else if (tournament.type === TournamentType.CUP) {
-        const shuffledTeams = teams.sort(() => Math.random() - 0.5);
-        const totalTeams = shuffledTeams.length;
-
-        let exponent = Math.ceil(Math.log2(totalTeams));
-        if (exponent < 1) exponent = 1;
-
-        // Estructura para agrupar todas las rondas que vamos a crear
-        const allRoundsSeries: TournamentSeries[][] = [];
-
-        // 1. CREAMOS EL ÁRBOL DE FORMA CRECIENTE (Ronda 1 a Exponente)
-        for (let r = 1; r <= exponent; r++) {
-          // r = 1 tiene la mayor cantidad de partidos. Cada ronda superior tiene la mitad.
-          const roundsCount = Math.pow(2, exponent - r);
-
-          let stageName = 'Final';
-          if (roundsCount === 2) stageName = 'Semifinal';
-          else if (roundsCount === 4) stageName = 'Cuartos de Final';
-          else if (roundsCount === 8) stageName = 'Octavos de Final';
-          else if (roundsCount > 8) stageName = `Ronda de ${roundsCount * 2}`;
-
-          const currentRoundSeries: TournamentSeries[] = [];
-
-          for (let s = 0; s < roundsCount; s++) {
-            const series = queryRunner.manager.create(TournamentSeries, {
-              tournament,
-              stage_name: stageName,
-              round_order: r,
-              status: SeriesStatus.PENDING,
-              wins_required: 2,
-            });
-
-            const savedSeries = await queryRunner.manager.save(
-              TournamentSeries,
-              series,
-            );
-            currentRoundSeries.push(savedSeries);
-          }
-
-          allRoundsSeries.push(currentRoundSeries);
-        }
-
-        // 2. ENLAZAMOS LAS RONDAS ENTRE SÍ (Conectamos los punteros de los hijos con sus padres)
-        for (let r = 0; r < exponent - 1; r++) {
-          const currentRound = allRoundsSeries[r];
-          const nextRound = allRoundsSeries[r + 1];
-
-          for (let s = 0; s < currentRound.length; s++) {
-            const parentIndex = Math.floor(s / 2);
-            currentRound[s].next_series = nextRound[parentIndex];
-            currentRound[s].next_series_slot =
-              s % 2 === 0 ? SeriesSlot.TEAM_A : SeriesSlot.TEAM_B;
-
-            await queryRunner.manager.save(TournamentSeries, currentRound[s]);
-          }
-        }
-
-        // 3. POBLAMOS LA RONDA 1 (allRoundsSeries[0]) CON LOS EQUIPOS REALES
-        const firstRoundSeries = allRoundsSeries[0];
-        let teamIndex = 0;
-
-        for (const match of firstRoundSeries) {
-          if (teamIndex < totalTeams) {
-            match.team_a = shuffledTeams[teamIndex++];
-          }
-          if (teamIndex < totalTeams) {
-            match.team_b = shuffledTeams[teamIndex++];
-          }
-
-          // Caso de BYE (Rival nulo, pasa directo)
-          if (match.team_a && !match.team_b) {
-            match.winner = match.team_a;
-            match.status = SeriesStatus.COMPLETED;
-            match.team_a_wins = match.wins_required;
-
-            if (match.next_series && match.next_series_slot) {
-              const parent = match.next_series;
-              if (match.next_series_slot === SeriesSlot.TEAM_A) {
-                parent.team_a = match.team_a;
-              } else {
-                parent.team_b = match.team_a;
-              }
-              await queryRunner.manager.save(TournamentSeries, parent);
-            }
-          }
-          await queryRunner.manager.save(TournamentSeries, match);
-        }
-
-        tournament.current_stage =
-          firstRoundSeries[0]?.stage_name || 'Fase Inicial';
-      }
-
-      tournament.status = TournamentStatus.STARTED;
-      await queryRunner.manager.save(Tournament, tournament);
-
-      await queryRunner.commitTransaction();
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      // Ajustamos las llaves para que el bloque finally quede bien formateado
-      await queryRunner.release();
     }
+
+    // 6. ACTIVAR EL TORNEO
+    // Pasamos el estado a STARTED para indicar que la competencia está en curso
+    tournament.status = TournamentStatus.STARTED;
+    return await this.tournamentRepository.save(tournament);
   }
 }

@@ -10,29 +10,15 @@ import {
 } from '@nestjs/common';
 import { MatchesService } from './matches.service';
 import { Match } from './entities/match.entity';
+import { WebhookRiotDto } from './dto/update-match-webhook.dto';
 @Controller('matches')
 export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
-  // Endpoint preparado para recibir el evento de finalización (Webhook de Riot o admin manual)
-  @Post(':id/result')
-  async reportResult(
-    @Param('id', ParseUUIDPipe) matchId: string,
-    @Body()
-    resultData: {
-      riot_match_id: string;
-      winner_team_id: string;
-      stats: Record<string, any>;
-    },
-  ) {
-    const { riot_match_id, winner_team_id, stats } = resultData;
-
-    return await this.matchesService.reportMatchResult(
-      matchId,
-      riot_match_id,
-      winner_team_id,
-      stats,
-    );
+  @Post('webhook')
+  async handleRiotWebhook(@Body() webhookData: WebhookRiotDto) {
+    // El ID del partido viaja oculto dentro de metaData gracias a nuestro truco
+    return await this.matchesService.processRiotWebhook(webhookData);
   }
   @Post()
   async create(
