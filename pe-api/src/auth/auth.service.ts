@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/auth.dto';
-
+import { UserRole } from '../users/entities/user.entity';
 interface AuthResult {
   accessToken: string;
   refreshToken: string;
@@ -90,8 +90,9 @@ export class AuthService {
   private async generateTokens(
     userId: string,
     username: string,
-    role: string,
+    role: UserRole, // ➔ Cambiado de 'string' a 'UserRole' para mantener el tipado fuerte
   ): Promise<AuthResult> {
+    // El payload ya guarda el rol correctamente, lo dejamos intacto
     const payload = { sub: userId, username, role };
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -118,7 +119,7 @@ export class AuthService {
         id: user!.id,
         username: user!.username,
         email: user!.email,
-        role: user!.role,
+        role: user!.role, // ➔ Esto ya viaja bien mapeado al cliente
         riotGameName: user!.riotGameName,
         riotTagLine: user!.riotTagLine,
         riotRegion: user!.riotRegion,

@@ -184,4 +184,99 @@ export class RiotService {
       return [];
     }
   }
+  // ─── API DE TORNEOS (STUB) ────────────────────────────────────────────────
+
+  /**
+   * Obtiene el Provider ID del entorno o registra uno nuevo si no existe.
+   * IMPORTANTE: La URL debe ser tu dominio público (ej: https://api.tuplataforma.com/matches/webhook)
+   */
+  async getOrCreateProviderId(webhookUrl: string): Promise<number> {
+    // 1. Buscamos si ya lo tenés configurado en el .env
+    const envProviderId = this.config.get<number>('RIOT_PROVIDER_ID');
+
+    if (envProviderId) {
+      return envProviderId;
+    }
+
+    // 2. Si no existe, nos registramos en Riot
+    try {
+      const { data } = await this.accountClient.post<number>(
+        '/lol/tournament-stub/v5/providers',
+        {
+          region: 'LAS',
+          url: webhookUrl,
+        },
+      );
+
+      // 3. Te avisamos por consola para que lo guardes para siempre
+      console.warn('====================================================');
+      console.warn(`[ATENCIÓN] Nuevo Provider ID generado en Riot: ${data}`);
+      console.warn(`Por favor, agregá esta línea a tu archivo .env:`);
+      console.warn(`RIOT_PROVIDER_ID=${data}`);
+      console.warn('====================================================');
+
+      return data;
+    } catch (error) {
+      console.error('Error de Riot API:', error);
+      throw new InternalServerErrorException(
+        'Fallo al registrar el Provider en la API de Torneos de Riot',
+      );
+    }
+  }
+
+  /**
+   * Registra un nuevo torneo lógico en Riot Games.
+   * Esto se ejecuta UNA vez cuando creás el torneo en tu plataforma.
+   */
+  async registerTournament(
+    providerId: number,
+    tournamentName: string,
+  ): Promise<number> {
+    try {
+      const { data } = await this.accountClient.post<number>(
+        '/lol/tournament-stub/v5/tournaments',
+        {
+          name: tournamentName,
+          providerId: providerId,
+        },
+      );
+      return data; // Devuelve el tournamentId (ej: 12345)
+    } catch (error) {
+      console.error('Error de Riot API:', error);
+      throw new InternalServerErrorException(
+        `Fallo al registrar el torneo "${tournamentName}" en Riot`,
+      );
+    }
+  }
+
+  /**
+   * Genera el lote (batch) de códigos para repartir en tus partidas.
+   * Esto se ejecuta cuando armás el fixture (generateFixture).
+   */
+  async generateTournamentCodes(
+    tournamentId: number,
+    count: number,
+    mapType: string,
+    pickType: string,
+    metaData: string = '', // UUID de tu Match por defecto vacío
+  ): Promise<string[]> {
+    try {
+      const { data } = await this.accountClient.post<string[]>(
+        `/lol/tournament-stub/v5/codes?count=${count}&tournamentId=${tournamentId}`,
+        {
+          mapType: mapType,
+          pickType: pickType,
+          spectatorType: 'ALL',
+          teamSize: 5,
+          metadata: metaData,
+        },
+      );
+      return data; // Devuelve ['LAS-123', 'LAS-456', ...]
+    } catch (error) {
+      console.error('Error de Riot API:', error);
+      throw new InternalServerErrorException(
+        `Fallo al generar los ${count} códigos de torneo`,
+      );
+    }
+  }
 }

@@ -9,7 +9,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { SeriesService } from './series.service';
-import { TournamentSeries } from './entities/series.entity';
+import { Serie } from './entities/series.entity';
 import { CreateSeriesDto } from './dto/create-series.dto';
 
 @Controller('series')
@@ -39,7 +39,7 @@ export class SeriesController {
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateSeriesDto: Partial<TournamentSeries>,
+    @Body() updateSeriesDto: Partial<Serie>,
   ) {
     return await this.seriesService.update(id, updateSeriesDto);
   }

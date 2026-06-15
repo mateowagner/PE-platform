@@ -4,8 +4,10 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { TournamentSeries } from '../../series/entities/series.entity';
+import { Serie } from '../../series/entities/series.entity';
 import { Team } from '../../teams/entities/team.entity';
 
 export enum MatchStatus {
@@ -23,10 +25,13 @@ export class Match {
   match_order!: number; // Indica si es el Juego 1, Juego 2, Juego 3...
 
   @Column({ type: 'varchar', length: 150, nullable: true })
-  riot_match_id?: string; // El ID real de la API de Riot Games
+  riot_match_id?: string; // El ID real de la API de Riot Games después de jugarse
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  tournament_code?: string; // Código único provisto por Riot para el lobby
 
   @Column({ type: 'jsonb', nullable: true })
-  stats?: Record<string, any>; // Guardamos el JSON crudo con todo el KDA, oro, etc.
+  stats?: Record<string, any>; // JSON crudo con KDA, oro, daño, etc.
 
   @Column({
     type: 'enum',
@@ -35,12 +40,26 @@ export class Match {
   })
   status!: MatchStatus;
 
+  // --- FECHAS DE LA PARTIDA REAL (RIOT) ---
+  @Column({ type: 'timestamp', nullable: true })
+  start_date?: Date; // Cuándo inició el mapa en la Grieta
+
+  @Column({ type: 'timestamp', nullable: true })
+  end_date?: Date; // Cuándo explotó el Nexo
+
+  // --- AUDITORÍA INTERNA DEL SISTEMA ---
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at!: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updated_at!: Date;
+
   // --- RELACIONES ---
-  @ManyToOne(() => TournamentSeries, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Serie, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'series_id' })
-  series!: TournamentSeries;
+  series!: Serie;
 
   @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'winner_id' })
-  winner?: Team; // El equipo que destruyó el nexo
+  winner?: Team; // El equipo que ganó este mapa específico
 }

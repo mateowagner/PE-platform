@@ -2,61 +2,25 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useApi } from "../hooks/useApi";
+import { AdminTournamentPanel } from "../components/AdminTournamentPanel";
 import {
   Calendar,
   Users,
   Trophy,
   ShieldAlert,
   ArrowLeft,
-  Play,
   LayoutGrid,
   Eye,
 } from "lucide-react";
 import "./TournamentDetailPage.css";
 
-interface ParticipantTeam {
-  id: string;
-  name: string;
-  logoUrl: string | null;
-  memberCount: number;
-  avgTier: string;
-}
-
-interface TournamentSeries {
-  id: string;
-  stage_name: string;
-  round_order: number;
-  status: string;
-  team_a_wins: number;
-  team_b_wins: number;
-  wins_required: number;
-  team_a?: { id: string; name: string } | null;
-  team_b?: { id: string; name: string } | null;
-  winner?: { id: string; name: string } | null;
-}
-
-interface TournamentDetails {
-  id: string;
-  name: string;
-  description?: string;
-  type: string;
-  status: string;
-  skill_tier: string;
-  registration_start_date: string;
-  registration_end_date: string;
-  start_date: string;
-  max_teams: number;
-  entry_fee: string;
-  prize_pool?: string;
-  current_stage: string;
-  teams: ParticipantTeam[];
-  currentTeamsCount: number;
-}
+// ➔ IMPORTACIÓN CENTRALIZADA: Consumimos la fuente de la verdad unificada
+import type { TournamentDetails, TournamentSeries } from "../types";
 
 export default function TournamentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
   const { authFetch } = useApi();
 
   const [tournament, setTournament] = useState<TournamentDetails | null>(null);
@@ -68,7 +32,6 @@ export default function TournamentDetailsPage() {
   const [myTeam, setMyTeam] = useState<any | null>(null);
   const [checkingTeam, setCheckingTeam] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
-
   const [activeStageTab, setActiveStageTab] = useState<string>("");
 
   const fetchDetails = async () => {
@@ -76,7 +39,7 @@ export default function TournamentDetailsPage() {
       const res = await authFetch(`/tournaments/${id}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setTournament(data);
+      setTournament(data as TournamentDetails); // Casting seguro al tipo unificado
 
       if (data.status === "STARTED" || data.status === "FINISHED") {
         const resSeries = await authFetch(`/tournaments/${id}/series`);
@@ -104,7 +67,7 @@ export default function TournamentDetailsPage() {
         const resDetails = await authFetch(`/tournaments/${id}`);
         if (resDetails.ok) {
           const dataDetails = await resDetails.json();
-          setTournament(dataDetails);
+          setTournament(dataDetails as TournamentDetails);
 
           if (
             dataDetails.status === "STARTED" ||
@@ -189,27 +152,36 @@ export default function TournamentDetailsPage() {
     }
   };
 
-  const handleGenerateFixture = async () => {
-    if (!tournament) return;
+  const { deleteTournament } = useApi();
+
+  const handleDeleteTournament = async () => {
+    // 1. Cláusula de salvaguarda para el enrutador
+    if (!id) return;
+
+    // 2. Protección doble: Confirmación nativa antes de golpear la base de datos
+    const confirmed = window.confirm(
+      `🚨 ¡ALERTA! ¿Estás seguro de que querés eliminar el torneo "${tournament?.name}"?\nEsta acción borrará todas las llaves, series y registros asociados de forma permanente.`,
+    );
+
+    if (!confirmed) return;
+
     setActionLoading(true);
     setErrorMessage(null);
+
     try {
-      const res = await authFetch(`/tournaments/${id}/generate-fixture`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Error al generar fixture.");
-      }
-      await fetchDetails();
+      await deleteTournament(id);
+
+      navigate("/tournaments");
     } catch (err: any) {
-      setErrorMessage(err.message);
+      setErrorMessage(
+        err.message ||
+          "Error al intentar eliminar el torneo. Comprobá tus permisos.",
+      );
     } finally {
-      setActionLoading(false);
+      setActionLoading(false); // Liberamos la UI en caso de fallo
     }
   };
 
-  // RENDERIZADOR COMPACTO UNIFICADO (HLTV STYLE)
   const renderMatchCard = (match: TournamentSeries) => {
     const isLive = match.status === "IN_PROGRESS";
     return (
@@ -296,8 +268,12 @@ export default function TournamentDetailsPage() {
 
   const isAlreadyInscribed =
     myTeam && tournament.teams.some((t) => t.id === myTeam.id);
-  const formatPrice = (fee: string) =>
-    parseFloat(fee) === 0 ? "Gratuito" : `$${parseFloat(fee).toLocaleString()}`;
+
+  // ➔ CORRECCIÓN: Forzamos el casteo a string seguro para el método de parseo matemático
+  const formatPrice = (fee: string | number) => {
+    const numericFee = typeof fee === "string" ? parseFloat(fee) : fee;
+    return numericFee === 0 ? "Gratuito" : `$${numericFee.toLocaleString()}`;
+  };
 
   const uniqueStages = Array.from(new Set(series.map((s) => s.stage_name)));
   const filteredSeries = series.filter((s) => s.stage_name === activeStageTab);
@@ -310,22 +286,78 @@ export default function TournamentDetailsPage() {
         <button className="btn-back" onClick={() => navigate(-1)}>
           <ArrowLeft size={16} /> Volver
         </button>
-
-        {tournament.status === "PREPARING" &&
-          tournament.currentTeamsCount >= 2 && (
-            <button
-              className="btn btn-primary btn-test-fixture"
-              onClick={handleGenerateFixture}
-              disabled={actionLoading}
-            >
-              <Play
-                size={14}
-                style={{ marginRight: "0.4rem", display: "inline" }}
-              />{" "}
-              GENERAR FIXTURE
-            </button>
-          )}
       </div>
+
+      {user?.role === "ADMIN" && (
+        <div
+          className="admin-zone-bar"
+          style={{
+            background: "rgba(124, 58, 237, 0.05)",
+            border: "1px solid rgba(124, 58, 237, 0.2)",
+            padding: "1rem",
+            borderRadius: "8px",
+            marginBottom: "1.5rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "1rem",
+          }}
+        >
+          <div
+            style={{
+              color: "var(--text-primary)",
+              fontSize: "0.85rem",
+              fontWeight: "bold",
+              fontFamily: "var(--font-display)",
+              letterSpacing: "0.5px",
+            }}
+          >
+            ⚙️ PANEL DE CONTROL DE ADMINISTRADOR
+          </div>
+
+          <div
+            style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}
+          >
+            {/* Se envía y recibe el tipo extendido de manera compatible */}
+            <AdminTournamentPanel
+              tournament={tournament as any}
+              onTournamentStarted={(updatedTournament) =>
+                setTournament(updatedTournament as TournamentDetails)
+              }
+            />
+
+            {tournament.status === "PREPARING" && (
+              <button
+                onClick={() => console.log("Abrir modal")}
+                className="btn btn-outline"
+                style={{
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.85rem",
+                  height: "38px",
+                }}
+              >
+                Editar Datos
+              </button>
+            )}
+
+            <button
+              onClick={handleDeleteTournament}
+              disabled={actionLoading || tournament.status !== "PREPARING"}
+              className="btn btn-danger"
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "0.85rem",
+                height: "38px",
+                cursor:
+                  tournament.status === "PREPARING" ? "pointer" : "not-allowed",
+                opacity: tournament.status === "PREPARING" ? 1 : 0.4,
+              }}
+            >
+              {actionLoading ? "Eliminando..." : "Eliminar Torneo"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {tournament.status === "PREPARING" ? (
         <div className="tournament-grid-layout">
@@ -438,7 +470,7 @@ export default function TournamentDetailsPage() {
               Equipos Inscriptos ({tournament.currentTeamsCount})
             </h3>
             <div className="participants-list">
-              {tournament.teams.map((team) => (
+              {tournament.teams.map((team: any) => (
                 <div key={team.id} className="participant-item-row">
                   <div className="item-row-info">
                     <div className="participant-avatar-placeholder">
@@ -447,14 +479,15 @@ export default function TournamentDetailsPage() {
                     <div>
                       <span className="participant-name">{team.name}</span>
                       <span className="participant-subtext">
-                        {team.memberCount} Miembros
+                        {team.memberCount || 0} Miembros
                       </span>
                     </div>
                   </div>
+                  {/* ➔ CORRECCIÓN: El operador '?.' frena cortocircuitos si avgTier no viene calculado */}
                   <span
-                    className={`rank-badge rank-${team.avgTier.toLowerCase()}`}
+                    className={`rank-badge rank-${team.avgTier?.toLowerCase() || "unranked"}`}
                   >
-                    Tier: {team.avgTier}
+                    Tier: {team.avgTier || "S/D"}
                   </span>
                 </div>
               ))}
@@ -467,7 +500,8 @@ export default function TournamentDetailsPage() {
             <div>
               <h1 className="comp-title">{tournament.name}</h1>
               <p className="comp-subtitle">
-                {tournament.type} • TIER {tournament.skill_tier} • ETAPA ACTUAL:{" "}
+                {String(tournament.type)} • TIER {tournament.skill_tier} • ETAPA
+                ACTUAL:{" "}
                 <span className="highlight-purple">
                   {tournament.current_stage}
                 </span>
@@ -485,8 +519,7 @@ export default function TournamentDetailsPage() {
             </div>
           </div>
 
-          {/* === INTERFAZ MODO LIGA (HLTV TABS) === */}
-          {tournament.type === "LEAGUE" && (
+          {tournament.type === ("LEAGUE" as any) && (
             <>
               <div className="hltv-stage-container">
                 <div className="hltv-stage-selector-bar">
@@ -501,7 +534,6 @@ export default function TournamentDetailsPage() {
                   ))}
                 </div>
               </div>
-
               <div className="hltv-series-grid-layout">
                 {filteredSeries.length === 0 ? (
                   <p className="empty-list-text">
@@ -514,8 +546,7 @@ export default function TournamentDetailsPage() {
             </>
           )}
 
-          {/* === INTERFAZ MODO COPA (ÁRBOL ELÁSTICO SIMÉTRICO) === */}
-          {tournament.type === "CUP" &&
+          {tournament.type === ("CUP" as any) &&
             (() => {
               const roundsMap = series.reduce(
                 (acc: Record<number, TournamentSeries[]>, item) => {
@@ -551,7 +582,6 @@ export default function TournamentDetailsPage() {
                       gridTemplateColumns: `repeat(${previousRoundsOrders.length}, 1fr) 1.2fr repeat(${previousRoundsOrders.length}, 1fr)`,
                     }}
                   >
-                    {/* ALA IZQUIERDA: Primera mitad de cada ronda */}
                     {previousRoundsOrders.map((rOrder) => {
                       const roundMatches = roundsMap[rOrder] || [];
                       const leftBranchMatches = roundMatches.slice(
@@ -575,7 +605,6 @@ export default function TournamentDetailsPage() {
                       );
                     })}
 
-                    {/* CENTRO: LA GRAN FINAL */}
                     <div className="cup-elastic-column branch-center-highlight">
                       <div className="trophy-cup-icon-wrapper">
                         <Trophy size={28} className="gold-glow-icon" />
@@ -592,7 +621,6 @@ export default function TournamentDetailsPage() {
                       )}
                     </div>
 
-                    {/* ALA DERECHA: Segunda mitad en espejo inversamente cronológico */}
                     {[...previousRoundsOrders].reverse().map((rOrder) => {
                       const roundMatches = roundsMap[rOrder] || [];
                       const rightBranchMatches = roundMatches.slice(
@@ -621,7 +649,6 @@ export default function TournamentDetailsPage() {
         </div>
       )}
 
-      {/* MODAL DE CONFIRMACIÓN */}
       {showCancelModal && (
         <div
           style={{

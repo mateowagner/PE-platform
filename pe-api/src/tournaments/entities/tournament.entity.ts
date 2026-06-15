@@ -12,7 +12,7 @@ import {
 } from 'typeorm';
 import { Team } from '../../teams/entities/team.entity';
 import { User } from '../../users/entities/user.entity';
-import { TournamentSeries } from '../../series/entities/series.entity'; // La crearemos luego
+import { Serie } from '../../series/entities/series.entity'; // La crearemos luego
 
 export enum TournamentType {
   LEAGUE = 'LEAGUE',
@@ -28,11 +28,22 @@ export enum TournamentStatus {
 export enum SkillTier {
   DIV_1 = 'DIV_1',
   DIV_2 = 'DIV_2',
-  TIER_HIGH = 'TIER_HIGH',
-  TIER_MID = 'TIER_MID',
-  TIER_LOW = 'TIER_LOW',
+  HIGH_TIER = 'HIGH_TIER',
+  MID_HIGH = 'MID_HIGH',
+  MID = 'MID',
+  LOW = 'LOW',
+}
+export enum MapType {
+  SUMMONERS_RIFT = 'SUMMONERS_RIFT',
+  HOWLING_ABYSS = 'HOWLING_ABYSS',
 }
 
+export enum PickType {
+  BLIND_PICK = 'BLIND_PICK',
+  DRAFT_MODE = 'DRAFT_MODE',
+  ALL_RANDOM = 'ALL_RANDOM',
+  TOURNAMENT_DRAFT = 'TOURNAMENT_DRAFT',
+}
 @Entity('tournaments')
 export class Tournament {
   @PrimaryGeneratedColumn('uuid')
@@ -108,12 +119,27 @@ export class Tournament {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   created_by!: User;
 
-  @OneToMany(() => TournamentSeries, (series) => series.tournament)
-  series!: TournamentSeries[];
+  @OneToMany(() => Serie, (series) => series.tournament)
+  series!: Serie[];
 
   @CreateDateColumn()
   created_at!: Date;
 
   @UpdateDateColumn()
   updated_at!: Date;
+  @Column({
+    type: 'enum',
+    enum: MapType,
+    default: MapType.SUMMONERS_RIFT,
+  })
+  map_type!: MapType;
+
+  @Column({
+    type: 'enum',
+    enum: PickType,
+    default: PickType.TOURNAMENT_DRAFT,
+  })
+  pick_type!: PickType;
+  @Column({ type: 'varchar', nullable: true })
+  riot_tournament_id?: string; // El ID real del torneo en la API de Riot después de registrarlo
 }

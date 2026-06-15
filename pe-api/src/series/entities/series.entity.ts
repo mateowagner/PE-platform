@@ -19,8 +19,8 @@ export enum SeriesSlot {
   TEAM_B = 'TEAM_B',
 }
 
-@Entity('tournament_series')
-export class TournamentSeries {
+@Entity('series')
+export class Serie {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
@@ -42,9 +42,9 @@ export class TournamentSeries {
   winner?: Team; // Se setea automáticamente al finalizar la serie
 
   // --- AUTORREFERENCIA (Árbol binario para formato Copa) ---
-  @ManyToOne(() => TournamentSeries, { nullable: true })
+  @ManyToOne(() => Serie, { nullable: true })
   @JoinColumn({ name: 'next_series_id' })
-  next_series?: TournamentSeries; // A dónde viaja el ganador
+  next_series?: Serie; // A dónde viaja el ganador
 
   @Column({
     type: 'enum',

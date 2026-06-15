@@ -5,6 +5,6 @@ import { RiotController } from './riot.controller';
 @Module({
   controllers: [RiotController],
   providers: [RiotService],
-  exports: [RiotService], // exportamos para que AuthModule pueda inyectarlo
+  exports: [RiotService],
 })
 export class RiotModule {}
