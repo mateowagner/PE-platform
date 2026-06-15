@@ -1,9 +1,5 @@
-export type TournamentStatus =
-  | "REGISTRATION"
-  | "ONGOING"
-  | "FINISHED"
-  | "PENDING";
-export type TournamentType = "ROUND_ROBIN" | "ELIMINATION" | "GROUPS";
+export type TournamentStatus = "PREPARING" | "STARTED" | "FINISHED";
+export type TournamentType = "LEAGUE" | "CUP" | "GROUPS";
 export type SkillTier =
   | "IRON"
   | "BRONZE"
@@ -40,16 +36,34 @@ export interface Tournament {
   description?: string;
   type: TournamentType;
   status: TournamentStatus;
-  skill_tier: SkillTier;
-  registration_start_date: string; // Recibimos ISO strings desde el back
+  skill_tier: string;
+  registration_start_date: string;
   registration_end_date: string;
   start_date: string;
   end_date?: string;
   max_teams: number;
-  entry_fee: number;
+  entry_fee: number | string;
   prize_pool?: string;
   current_stage: string;
   teams: Team[];
-  winner?: Team;
   created_at: string;
+}
+export interface TournamentDetails extends Tournament {
+  currentTeamsCount: number;
+  teams: (Team & {
+    memberCount?: number;
+    avgTier?: string;
+  })[];
+}
+export interface TournamentSeries {
+  id: string;
+  stage_name: string;
+  round_order: number;
+  status: string;
+  team_a_wins: number;
+  team_b_wins: number;
+  wins_required: number;
+  team_a?: { id: string; name: string } | null;
+  team_b?: { id: string; name: string } | null;
+  winner?: { id: string; name: string } | null;
 }
