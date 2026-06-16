@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { useAuth } from "../hooks/useAuth";
+import axios from "axios";
 import "./AuthPage.css";
 
 export default function RegisterPage() {
@@ -12,37 +14,38 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const { login } = useAuthStore();
+  const { registerAccount } = useAuth(); // ➔ Inyectamos el servicio
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
     if (form.password !== form.confirm) {
       setError("Las contraseñas no coinciden");
       return;
     }
+
     setLoading(true);
+
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          username: form.username,
-          email: form.email,
-          password: form.password,
-        }),
+      // ➔ Solo enviamos el payload que el backend necesita
+      const data = await registerAccount({
+        username: form.username,
+        email: form.email,
+        password: form.password,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Error al registrarse");
-        return;
-      }
+
       login(data.user, data.accessToken);
       navigate("/dashboard");
-    } catch {
-      setError("Error de conexión con el servidor");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Error al registrarse");
+      } else {
+        setError("Error de conexión con el servidor");
+      }
     } finally {
       setLoading(false);
     }

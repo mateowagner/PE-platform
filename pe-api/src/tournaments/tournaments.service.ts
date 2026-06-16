@@ -234,42 +234,51 @@ export class TournamentsService {
     createTournamentDto: CreateTournamentDto,
     creatorId: string,
   ): Promise<Tournament> {
-    const { registration_start_date, registration_end_date, start_date } =
+    const { registration_start_date, registration_end_date, start_date, name } =
       createTournamentDto;
 
     const regStart = new Date(registration_start_date);
     const regEnd = new Date(registration_end_date);
     const tournamentStart = new Date(start_date);
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalizamos las horas para comparar solo días
+    today.setHours(0, 0, 0, 0);
 
-    // VALIDACIÓN 1: La inscripción no puede abrir en el pasado
     if (regStart < today) {
       throw new BadRequestException(
         'La fecha de inicio de inscripción no puede estar en el pasado.',
       );
     }
 
-    // VALIDACIÓN 2: El cierre de inscripción debe ser posterior a la apertura
     if (regEnd <= regStart) {
       throw new BadRequestException(
         'La fecha de finalización de inscripción debe ser posterior a la fecha de inicio.',
       );
     }
 
-    // VALIDACIÓN 3: El torneo debe empezar estrictamente después de cerrar las inscripciones
     if (tournamentStart <= regEnd) {
       throw new BadRequestException(
         'La fecha de inicio del torneo debe ser posterior al cierre de las inscripciones.',
       );
     }
 
-    // Creación de la instancia sobreescribiendo los valores controlados por el sistema
+    // 1. OBTENEMOS EL PROVIDER GLOBAL (Si no está en el .env, el servicio lo registra en Riot)
+    // Reemplaza esta URL con la real donde vas a recibir los Webhooks de resultados de Riot
+    const webhookUrl = 'https://tu-dominio-publico.com/api/v1/matches/webhook';
+    const providerId = await this.riotService.getOrCreateProviderId(webhookUrl);
+
+    // 2. REGISTRAMOS EL TORNEO EN RIOT GAMES USANDO ESE PROVIDER
+    const riotTournamentId = await this.riotService.registerTournament(
+      providerId,
+      name,
+    );
+
+    // 3. PERSISTIMOS EL TORNEO LOCALMENTE YA CON SU ID DE RIOT INYECTADO
     const newTournament = this.tournamentRepository.create({
       ...createTournamentDto,
       status: TournamentStatus.PREPARING,
       current_stage: 'PRE-TORNEO',
-      created_by: { id: creatorId } as DeepPartial<User>, // Asignamos la relación usando solo el ID
+      riot_tournament_id: String(riotTournamentId), // ➔ CRÍTICO: Guardamos la llave de Riot
+      created_by: { id: creatorId } as DeepPartial<User>,
     });
 
     return await this.tournamentRepository.save(newTournament);
@@ -362,13 +371,14 @@ export class TournamentsService {
       tournament.pick_type,
     );
 
-    // 4. CREAR LAS LLAVES DE LA PRIMERA RONDA
-    // Iteramos los equipos de a pares para armar los cruces iniciales
+    // 4. CREAR LAS LLAVES DE LA PRIMERA RONDA (Equipos Reales)
+    let currentRoundSeries: Serie[] = [];
+    let currentRoundOrder = 1;
+
     for (let i = 0; i < teams.length; i += 2) {
       const teamA = teams[i];
-      const teamB = teams[i + 1] ?? null; // Manejo por si hay número impar de equipos (BYE)
+      const teamB = teams[i + 1] ?? null;
 
-      // Instanciamos la serie (Enfrentamiento global)
       const series = this.seriesRepository.create({
         tournament,
         team_a: teamA,
@@ -376,37 +386,76 @@ export class TournamentsService {
         wins_required: winsRequired,
         team_a_wins: 0,
         team_b_wins: 0,
+        round_order: currentRoundOrder,
+        stage_name: 'Ronda 1', // Nombraremos mejor esto en la Fase 2
         status: SeriesStatus.PENDING,
       });
 
       const savedSeries = await this.seriesRepository.save(series);
+      currentRoundSeries.push(savedSeries);
 
-      // Si no hay rival (teamB es null), el equipo A avanza automáticamente y no se crean mapas
-      if (!teamB) {
+      // Lógica de repartición de mapas (Matches)
+      if (teamB) {
+        for (let j = 1; j <= maxMapsPerSeries; j++) {
+          const uniqueCode = riotCodes.shift();
+          const match = this.matchRepository.create({
+            series: savedSeries,
+            match_order: j,
+            status: MatchStatus.CREATED,
+            tournament_code: uniqueCode,
+          });
+          await this.matchRepository.save(match);
+        }
+      } else {
+        // Si no hay rival (BYE), avanza directo
         savedSeries.status = SeriesStatus.COMPLETED;
         savedSeries.winner = teamA;
         await this.seriesRepository.save(savedSeries);
-        continue;
-      }
-
-      // 5. GENERAR LOS MAPAS INDIVIDUALES (MATCHES) Y REPARTIR LOS CÓDIGOS
-      for (let j = 1; j <= maxMapsPerSeries; j++) {
-        // Extraemos el primer código disponible del mazo
-        const uniqueCode = riotCodes.shift();
-
-        const match = this.matchRepository.create({
-          series: savedSeries,
-          match_order: j,
-          status: MatchStatus.CREATED,
-          tournament_code: uniqueCode, // Asignamos el código único de Riot a la columna
-        });
-
-        await this.matchRepository.save(match);
       }
     }
 
+    // 5. CONSTRUIR EL RESTO DEL ÁRBOL HASTA LA FINAL (Equipos 'Por Definir')
+    while (currentRoundSeries.length > 1) {
+      currentRoundOrder++;
+      const nextRoundSeries: Serie[] = [];
+
+      for (let i = 0; i < currentRoundSeries.length; i += 2) {
+        const isFinal = currentRoundSeries.length <= 2;
+        const stageName = isFinal ? 'Gran Final' : `Ronda ${currentRoundOrder}`;
+
+        // ➔ CORRECCIÓN: Omitimos team_a y team_b en lugar de pasarles 'null'
+        // para que DeepPartial de TypeORM infiera el objeto correctamente.
+        const newSeries = this.seriesRepository.create({
+          tournament,
+          wins_required: winsRequired,
+          team_a_wins: 0,
+          team_b_wins: 0,
+          round_order: currentRoundOrder,
+          stage_name: stageName,
+          status: SeriesStatus.PENDING,
+        });
+
+        const savedNewSeries = await this.seriesRepository.save(newSeries);
+
+        nextRoundSeries.push(savedNewSeries);
+
+        // Generar mapas vacíos con códigos de Riot para esta llave futura
+        for (let j = 1; j <= maxMapsPerSeries; j++) {
+          const uniqueCode = riotCodes.shift();
+          const match = this.matchRepository.create({
+            series: savedNewSeries,
+            match_order: j,
+            status: MatchStatus.CREATED,
+            tournament_code: uniqueCode,
+          });
+          await this.matchRepository.save(match);
+        }
+      }
+
+      currentRoundSeries = nextRoundSeries; // Subimos un nivel en el árbol
+    }
+
     // 6. ACTIVAR EL TORNEO
-    // Pasamos el estado a STARTED para indicar que la competencia está en curso
     tournament.status = TournamentStatus.STARTED;
     return await this.tournamentRepository.save(tournament);
   }

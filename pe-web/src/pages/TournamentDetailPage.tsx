@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { useApi } from "../hooks/useApi";
 import { AdminTournamentPanel } from "../components/AdminTournamentPanel";
 import {
   Calendar,
@@ -13,15 +12,15 @@ import {
   Eye,
 } from "lucide-react";
 import "./TournamentDetailPage.css";
-
-// ➔ IMPORTACIÓN CENTRALIZADA: Consumimos la fuente de la verdad unificada
 import type { TournamentDetails, TournamentSeries } from "../types";
+import { useTournament } from "../hooks/useTournaments";
+import { useTeams } from "../hooks/useTeams";
+import axios from "axios";
 
 export default function TournamentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const { authFetch } = useApi();
 
   const [tournament, setTournament] = useState<TournamentDetails | null>(null);
   const [series, setSeries] = useState<TournamentSeries[]>([]);
@@ -33,23 +32,30 @@ export default function TournamentDetailsPage() {
   const [checkingTeam, setCheckingTeam] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [activeStageTab, setActiveStageTab] = useState<string>("");
+  const {
+    getTournamentDetails,
+    getTournamentSeries,
+    inscribeTeam,
+    cancelInscription,
+    deleteTournament,
+  } = useTournament();
 
+  const { getMyTeam } = useTeams();
   const fetchDetails = async () => {
+    if (!id) return;
     try {
-      const res = await authFetch(`/tournaments/${id}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setTournament(data as TournamentDetails); // Casting seguro al tipo unificado
+      const dataDetails = await getTournamentDetails(id);
+      setTournament(dataDetails);
 
-      if (data.status === "STARTED" || data.status === "FINISHED") {
-        const resSeries = await authFetch(`/tournaments/${id}/series`);
-        if (resSeries.ok) {
-          const dataSeries = await resSeries.json();
-          setSeries(dataSeries);
+      if (
+        dataDetails.status === "STARTED" ||
+        dataDetails.status === "FINISHED"
+      ) {
+        const dataSeries = await getTournamentSeries(id);
+        setSeries(dataSeries);
 
-          if (dataSeries.length > 0 && !activeStageTab) {
-            setActiveStageTab(dataSeries[0].stage_name);
-          }
+        if (dataSeries.length > 0 && !activeStageTab) {
+          setActiveStageTab(dataSeries[0].stage_name);
         }
       }
     } catch {
@@ -63,96 +69,72 @@ export default function TournamentDetailsPage() {
     const loadData = async () => {
       setLoading(true);
       setCheckingTeam(true);
+
       try {
-        const resDetails = await authFetch(`/tournaments/${id}`);
-        if (resDetails.ok) {
-          const dataDetails = await resDetails.json();
-          setTournament(dataDetails as TournamentDetails);
+        await fetchDetails();
 
-          if (
-            dataDetails.status === "STARTED" ||
-            dataDetails.status === "FINISHED"
-          ) {
-            const resSeries = await authFetch(`/tournaments/${id}/series`);
-            if (resSeries.ok) {
-              const dataSeries = await resSeries.json();
-              setSeries(dataSeries);
-              if (dataSeries.length > 0) {
-                setActiveStageTab(dataSeries[0].stage_name);
-              }
-            }
-          }
-        }
-
-        const resTeam = await authFetch("/teams/my-team");
-        if (resTeam.ok) {
-          const dataTeam = await resTeam.json();
-          setMyTeam(dataTeam);
-        } else {
-          setMyTeam(null);
+        // Buscamos el equipo del usuario usando el dominio de equipos
+        try {
+          const teamData = await getMyTeam();
+          setMyTeam(teamData);
+        } catch {
+          setMyTeam(null); // Si tira 404, no tiene equipo
         }
       } catch (err) {
         setErrorMessage("No se pudo cargar la información necesaria.");
       } finally {
-        setLoading(false);
         setCheckingTeam(false);
       }
     };
 
-    void loadData();
+    if (id) void loadData();
   }, [id]);
 
   const handleInscribe = async () => {
-    if (!tournament || !myTeam?.id) return;
+    if (!tournament || !myTeam?.id || !id) return;
+
     setActionLoading(true);
     setErrorMessage(null);
 
     try {
-      const res = await authFetch(`/tournaments/${id}/inscribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId: myTeam.id }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "No se pudo completar la inscripción.");
+      await inscribeTeam(id, myTeam.id);
+      await fetchDetails(); // Recargamos para que la UI muestre al equipo en la lista
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setErrorMessage(
+          err.response?.data?.message || "No se pudo completar la inscripción.",
+        );
+      } else {
+        setErrorMessage("Error de conexión con el servidor.");
       }
-
-      await fetchDetails();
-    } catch (err: any) {
-      setErrorMessage(err.message);
     } finally {
-      setActionLoading(false);
+      setActionLoading(false); // Apagamos el loader del botón, no el de la página
     }
   };
 
   const handleCancelInscription = async () => {
-    if (!tournament || !myTeam?.id) return;
+    if (!tournament || !myTeam?.id || !id) return;
+
     setActionLoading(true);
     setErrorMessage(null);
 
     try {
-      const res = await authFetch(`/tournaments/${id}/inscribe/${myTeam.id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "No se pudo cancelar la inscripción.");
-      }
-
+      await cancelInscription(id, myTeam.id);
       await fetchDetails();
       setShowCancelModal(false);
-    } catch (err: any) {
-      setErrorMessage(err.message);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setErrorMessage(
+          err.response?.data?.message || "No se pudo cancelar la inscripción.",
+        );
+      } else {
+        setErrorMessage("Error de conexión con el servidor.");
+      }
       setShowCancelModal(false);
     } finally {
       setActionLoading(false);
     }
   };
-
-  const { deleteTournament } = useApi();
 
   const handleDeleteTournament = async () => {
     // 1. Cláusula de salvaguarda para el enrutador
@@ -321,9 +303,13 @@ export default function TournamentDetailsPage() {
             {/* Se envía y recibe el tipo extendido de manera compatible */}
             <AdminTournamentPanel
               tournament={tournament as any}
-              onTournamentStarted={(updatedTournament) =>
-                setTournament(updatedTournament as TournamentDetails)
-              }
+              onTournamentStarted={async (updatedTournament) => {
+                // 1. Actualizamos el estado local para que el título y el badge cambien instantáneamente
+                setTournament(updatedTournament as TournamentDetails);
+
+                // 2. Forzamos la recarga de datos para que la vista vaya a buscar las llaves recién generadas
+                await fetchDetails();
+              }}
             />
 
             {tournament.status === "PREPARING" && (

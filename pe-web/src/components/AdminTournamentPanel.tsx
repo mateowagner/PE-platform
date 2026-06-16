@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { useApi } from "../hooks/useApi"; // ➔ Consumimos tu hook nativo
-import type { TournamentDetails } from "../types"; // ➔ Acoplamos la fuente de la verdad
+import type { TournamentDetails } from "../types";
+import { useTournament } from "../hooks/useTournament"; // ➔ Importamos tu hook
+import axios from "axios";
 
 interface Props {
-  tournament: TournamentDetails; // ➔ Cambiado de 'Tournament' a 'TournamentDetails'
+  tournament: TournamentDetails;
   onTournamentStarted: (updatedTournament: TournamentDetails) => void;
 }
 
@@ -11,13 +12,13 @@ export const AdminTournamentPanel: React.FC<Props> = ({
   tournament,
   onTournamentStarted,
 }) => {
-  const { authFetch } = useApi(); // ➔ Inicializamos el conector unificado
+  const { startTournament } = useTournament();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Zustand o tu backend calculan la longitud, usamos las propiedades unificadas
-  const totalTeamsInscribed = tournament.teams.length;
+  // Evaluamos cupos
+  const totalTeamsInscribed = tournament.teams?.length || 0;
   const isCupoIncompleto = totalTeamsInscribed < tournament.max_teams;
 
   if (tournament.status !== "PREPARING") {
@@ -29,30 +30,22 @@ export const AdminTournamentPanel: React.FC<Props> = ({
     setErrorMessage(null);
 
     try {
-      // Usamos authFetch apuntando a la ruta relativa de NestJS para heredar los tokens JWT
-      const res = await authFetch(
-        `/tournaments/${tournament.id}/generate-fixture`,
-        {
-          method: "POST",
-        },
-      );
+      // 1. Delegamos el POST a Axios
+      const updatedTournament = await startTournament(tournament.id);
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(
-          errorData.message || "No se pudo iniciar la competencia.",
-        );
-      }
-
-      const updatedData = (await res.json()) as TournamentDetails;
-
-      // Notificamos al padre de forma segura y tipada
-      onTournamentStarted(updatedData);
+      // 2. Cerramos el modal
       setIsModalOpen(false);
-    } catch (error: any) {
-      setErrorMessage(
-        error.message || "Ocurrió un error al intentar iniciar el torneo.",
-      );
+
+      // 3. Notificamos al padre para que actualice el estado y recargue las llaves
+      onTournamentStarted(updatedTournament);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setErrorMessage(
+          err.response?.data?.message || "Error al iniciar el torneo.",
+        );
+      } else {
+        setErrorMessage("Error de conexión con el servidor.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +54,7 @@ export const AdminTournamentPanel: React.FC<Props> = ({
   return (
     <div className="admin-panel-container">
       <button
-        className="btn btn-primary" // Usamos tus estilos globales CSS
+        className="btn btn-primary"
         style={{ height: "38px", fontSize: "0.85rem", padding: "0.5rem 1rem" }}
         onClick={() => setIsModalOpen(true)}
       >

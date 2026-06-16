@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useApi } from "../hooks/useApi";
+import { useTeams } from "../hooks/useTeams";
+import axios from "axios";
 import type { Team } from "../types";
 
 export default function CreateTeamModal({
@@ -9,7 +10,7 @@ export default function CreateTeamModal({
   onClose: () => void;
   onCreated: (team: Team) => void;
 }) {
-  const { authFetch } = useApi();
+  const { createTeam } = useTeams();
   const [name, setName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -30,33 +31,30 @@ export default function CreateTeamModal({
     setError("");
     setLoading(true);
 
+    const formData = new FormData();
+    formData.append("name", name);
+
+    if (uploadMode === "file" && logoFile) {
+      formData.append("logo", logoFile);
+    } else if (uploadMode === "url" && logoUrl) {
+      formData.append("logo_url", logoUrl);
+    }
+
     try {
-      const finalLogoUrl =
-        uploadMode === "file" && logoPreview
-          ? logoPreview
-          : logoUrl || undefined;
-
-      const res = await authFetch("/teams", {
-        method: "POST",
-        body: JSON.stringify({ name, logo_url: finalLogoUrl }),
-      });
-
-      const data = (await res.json()) as Team;
-      if (!res.ok) {
-        const err = data as unknown as { message: string };
-        setError(err.message || "Error al crear el equipo");
-        return;
+      const newTeam = await createTeam(formData);
+      onCreated(newTeam);
+      onClose();
+    } catch (err) {
+      // Manejo de errores profesional con Axios
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Error al crear el equipo");
+      } else {
+        setError("Error de conexión con el servidor");
       }
-      onCreated(data);
-    } catch {
-      setError("Error de conexión");
     } finally {
       setLoading(false);
     }
   };
-
-  // Evitar warning de variable no usada
-  void logoFile;
 
   return (
     <div className="create-team-modal-overlay" onClick={onClose}>

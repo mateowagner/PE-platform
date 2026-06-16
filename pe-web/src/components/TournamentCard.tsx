@@ -104,7 +104,7 @@ export default function TournamentCard({
             navigate(`/tournaments/${tournament.id}`);
           }}
         >
-          {tournament.status === "REGISTRATION"
+          {tournament.status === "PREPARING"
             ? "Inscribir Equipo"
             : "Ver Detalles"}
         </button>

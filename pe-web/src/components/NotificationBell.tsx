@@ -1,23 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell, Check, X } from "lucide-react";
-import { useApi } from "../hooks/useApi";
+import { useInvitations } from "../hooks/useInvitations"; // ➔ Importación corregida
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
-interface Invitation {
-  id: string;
-  status: string;
-  createdAt: string;
-  team: {
-    id: string;
-    name: string;
-    logoUrl?: string;
-  };
-}
+import axios from "axios"; // ➔ Necesario para el tipado de errores
+import type { Invitation } from "../types";
 
 export default function NotificationBell() {
-  const { authFetch } = useApi();
   const { updateUser } = useAuthStore();
   const navigate = useNavigate();
+
+  // ➔ Extraemos las herramientas de red de su propio dominio
+  const { getPendingInvitations, respondToInvitation } = useInvitations();
 
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -28,11 +22,8 @@ export default function NotificationBell() {
   // 1. Cargar invitaciones pendientes
   const fetchInvitations = async () => {
     try {
-      const res = await authFetch("/invitations/pending-invitations");
-      if (res.ok) {
-        const data = await res.json();
-        setInvitations(data.invitations || []);
-      }
+      const data = await getPendingInvitations();
+      setInvitations(data || []);
     } catch (error) {
       console.error("Error cargando notificaciones", error);
     }
@@ -41,12 +32,10 @@ export default function NotificationBell() {
   useEffect(() => {
     void fetchInvitations();
 
-    // Intervalo opcional para que revise cada 30 segundos si hay invitaciones nuevas
     const interval = setInterval(() => void fetchInvitations(), 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Cerrar el menú si hace clic afuera de la campanita
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -61,43 +50,39 @@ export default function NotificationBell() {
   }, []);
 
   // 2. Manejar las acciones de los botones (Aceptar / Rechazar)
-  const handleAction = async (id: string, action: "accept" | "reject") => {
+  const handleAction = async (id: string, action: "ACCEPT" | "REJECT") => {
     setLoadingAction(id);
+
     try {
-      const res = await authFetch(`/invitations/${id}/${action}`, {
-        method: "POST",
-      });
+      // Ejecución aislada de red
+      await respondToInvitation(id, action);
 
-      // ESCENARIO 1: Todo salió perfecto (200/201 OK)
-      if (res.ok) {
-        if (action === "accept") {
-          const acceptedInv = invitations.find((inv) => inv.id === id);
-          if (acceptedInv) {
-            updateUser({ teamId: acceptedInv.team.id });
-            setIsOpen(false);
-            navigate("/team");
-          }
+      if (action === "ACCEPT") {
+        const acceptedInv = invitations.find((inv) => inv.id === id);
+        if (acceptedInv) {
+          updateUser({ teamId: acceptedInv.team.id });
+          setIsOpen(false);
+          navigate("/team");
         }
-        await fetchInvitations(); // Refresca la lista
-        return;
       }
 
-      // ESCENARIO 2: El backend rebotó la petición (Errores 400, 404, 409, etc.)
-      const data = await res.json();
-
-      if (res.status === 404) {
-        // ¡Acá está la magia! Si es 404, significa que ya no está pendiente.
-        // En vez de tirar alert(), la removemos silenciosamente del estado local
-        setInvitations((prev) => prev.filter((inv) => inv.id !== id));
-
-        // Opcional: refrescamos por las dudas para sincronizar con el back
-        void fetchInvitations();
-      } else {
-        // Si es otro tipo de error (ej: 409 porque ya tiene otro equipo), ahí sí avisamos
-        alert(data.message || "Hubo un problema al procesar la solicitud.");
-      }
+      await fetchInvitations();
     } catch (error) {
-      console.error("Error en la acción de la invitación:", error);
+      // ➔ MANEJO DE ESTADOS HTTP CON AXIOS
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 404) {
+          // La magia del 404 ocurre ahora dentro de las excepciones
+          setInvitations((prev) => prev.filter((inv) => inv.id !== id));
+        } else {
+          // Errores como 409 (Ya perteneces a un equipo)
+          alert(
+            error.response?.data?.message ||
+              "Hubo un problema al procesar la solicitud.",
+          );
+        }
+      } else {
+        console.error("Error en la acción de la invitación:", error);
+      }
     } finally {
       setLoadingAction(null);
     }
@@ -263,7 +248,7 @@ export default function NotificationBell() {
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <button
                       disabled={loadingAction !== null}
-                      onClick={() => void handleAction(inv.id, "accept")}
+                      onClick={() => void handleAction(inv.id, "ACCEPT")}
                       style={{
                         background: "rgba(76, 175, 80, 0.15)",
                         border: "1px solid #4caf50",
@@ -279,7 +264,7 @@ export default function NotificationBell() {
                     </button>
                     <button
                       disabled={loadingAction !== null}
-                      onClick={() => void handleAction(inv.id, "reject")}
+                      onClick={() => void handleAction(inv.id, "REJECT")}
                       style={{
                         background: "rgba(244, 67, 54, 0.15)",
                         border: "1px solid #f44336",

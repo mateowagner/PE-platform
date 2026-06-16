@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/authStore";
-import { useApi } from "../hooks/useApi";
+import { useAuth } from "../hooks/useAuth";
+import axios from "axios";
 import "./AccountPage.css";
 
 const RANK_EMBLEMS: Record<string, string> = {
@@ -88,38 +89,35 @@ function RankCard({
 
 export default function AccountPage() {
   const { user, updateUser } = useAuthStore();
-  const { authFetch } = useApi();
   const [riotId, setRiotId] = useState("");
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState("");
   const [linkSuccess, setLinkSuccess] = useState("");
-
+  const { linkRiotAccount } = useAuth();
   const handleLinkRiot = async (e: React.FormEvent) => {
     e.preventDefault();
     setLinkError("");
     setLinkSuccess("");
     setLinking(true);
+
     try {
-      const res = await authFetch("/auth/link-riot", {
-        method: "POST",
-        body: JSON.stringify({ riotId }),
-      });
-      const data = (await res.json()) as {
-        message: string;
-        gameName: string;
-        tagLine: string;
-        user?: Partial<typeof user>;
-      };
-      if (!res.ok) {
-        const err = data as unknown as { message: string };
-        setLinkError(err.message || "Error al vincular");
-        return;
-      }
+      // Llamada limpia a la capa de red
+      const data = await linkRiotAccount(riotId);
+
+      // Actualizamos el estado global (Zustand) con los nuevos datos del usuario
       if (data.user) updateUser(data.user);
+
       setLinkSuccess(`✓ Cuenta vinculada: ${data.gameName}#${data.tagLine}`);
       setRiotId("");
-    } catch {
-      setLinkError("Error de conexión");
+    } catch (err) {
+      // Delegamos el manejo del error a Axios
+      if (axios.isAxiosError(err)) {
+        setLinkError(
+          err.response?.data?.message || "Error al vincular la cuenta",
+        );
+      } else {
+        setLinkError("Error de conexión con el servidor");
+      }
     } finally {
       setLinking(false);
     }
