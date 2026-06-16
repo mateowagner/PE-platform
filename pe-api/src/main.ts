@@ -30,7 +30,8 @@ async function bootstrap() {
 
   // CORS para el frontend
   app.enableCors({
-    origin: 'http://localhost:5173', // puerto de Vite
+    origin: 'http://localhost:5173',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 

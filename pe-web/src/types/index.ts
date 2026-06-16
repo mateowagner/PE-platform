@@ -67,3 +67,16 @@ export interface TournamentSeries {
   team_b?: { id: string; name: string } | null;
   winner?: { id: string; name: string } | null;
 }
+export interface Invitation {
+  id: string;
+  teamId: string;
+  userId: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  createdAt: string;
+  // ➔ Crucial para la UI: El backend debería incluir los datos básicos del equipo que invita
+  team?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+  };
+}
