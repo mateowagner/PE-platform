@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { useApi } from "../hooks/useApi";
+import { useTournament } from "../hooks/useTournaments";
 import type { Tournament, TournamentType } from "../types";
+import axios from "axios";
 
 interface Props {
   isOpen: boolean;
@@ -13,7 +14,7 @@ export default function CreateTournamentModal({
   onClose,
   onTournamentCreated,
 }: Props) {
-  const { createTournament } = useApi();
+  const { createTournament } = useTournament();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,8 +75,13 @@ export default function CreateTournamentModal({
 
       onTournamentCreated(newTournament);
       onClose();
-    } catch (err: any) {
-      setError(err.message || "No se pudo crear el torneo.");
+    } catch (err) {
+      // ➔ INTERCEPCIÓN ESTRICTA DE AXIOS
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "No se pudo crear el torneo.");
+      } else {
+        setError("Error de conexión con el servidor.");
+      }
     } finally {
       setIsLoading(false);
     }

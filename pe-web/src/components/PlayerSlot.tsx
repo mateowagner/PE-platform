@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { UserX } from "lucide-react";
-import { useApi } from "../hooks/useApi";
+import { useTeams } from "../hooks/useTeams";
+import axios from "axios";
 import type { Member } from "../types";
+import { UserX } from "lucide-react";
 
 const RANK_EMBLEMS: Record<string, string> = {
   UNRANKED:
@@ -55,7 +56,7 @@ export default function PlayerSlot({
   isCurrentUserCaptain: boolean;
   onMemberRemoved: (updatedTeam: any) => void;
 }) {
-  const { authFetch } = useApi();
+  const { kickMember } = useTeams();
   const [kicking, setKicking] = useState(false);
   const [showModal, setShowModal] = useState(false); // Estado para el modal personalizado
 
@@ -70,22 +71,20 @@ export default function PlayerSlot({
   }
 
   const handleKick = async () => {
+    if (!member) return;
     setKicking(true);
+
     try {
-      const res = await authFetch(`/teams/${teamId}/members/${member.id}`, {
-        method: "DELETE",
-      });
+      const updatedTeam = await kickMember(teamId, member.id);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "No se pudo expulsar al miembro");
-      }
-
-      onMemberRemoved(data);
+      onMemberRemoved(updatedTeam);
       setShowModal(false);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || "No se pudo expulsar al miembro");
+      } else {
+        alert("Error de conexión");
+      }
     } finally {
       setKicking(false);
     }

@@ -1,31 +1,28 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
-import { useApi } from "../hooks/useApi";
 import "./TeamPage.css";
 import type { Team } from "../types";
 import CreateTeamModal from "../components/CreateTeamModal";
 import PlayerSlot from "../components/PlayerSlot";
 import SendInvitationForm from "../components/SendInvitationForm";
+import { useTeams } from "../hooks/useTeams";
 const MAX_SLOTS = 5;
 
 export default function TeamPage() {
   const { user, updateUser } = useAuthStore();
-  const { authFetch } = useApi();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-
+  const { getMyTeam, leaveTeam } = useTeams();
   useEffect(() => {
     const fetchTeam = async () => {
       setLoading(true);
       try {
-        const res = await authFetch("/teams/my-team");
-        if (res.ok) {
-          const data = (await res.json()) as Team | null;
-          setTeam(data);
-        }
-      } catch {
-        /* sin equipo */
+        const data = await getMyTeam();
+        setTeam(data);
+      } catch (error) {
+        /* Si Axios atrapa un 404 (sin equipo), cae acá directo y deja team en null */
+        setTeam(null);
       } finally {
         setLoading(false);
       }
@@ -42,15 +39,11 @@ export default function TeamPage() {
     if (!user) return;
 
     try {
-      const res = await authFetch("/teams/leave", {
-        method: "POST",
-      });
-      if (res.ok) {
-        setTeam(null);
-        updateUser({ teamId: undefined });
-      }
+      await leaveTeam(); // ➔ Llamada limpia al servicio
+      setTeam(null);
+      updateUser({ teamId: undefined });
     } catch (error) {
-      console.error("Error leaving team:", error);
+      console.error("Error al abandonar el equipo:", error);
     }
   };
 

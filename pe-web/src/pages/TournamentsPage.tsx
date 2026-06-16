@@ -1,37 +1,45 @@
 import { useState, useEffect } from "react";
-import { useApi } from "../hooks/useApi";
 import type { Tournament } from "../types";
 import TournamentCard from "../components/TournamentCard";
 import { useAuthStore } from "../store/authStore";
 import CreateTournamentModal from "../components/CreateTournamentModal";
+import { useTournament } from "../hooks/useTournaments";
+import axios from "axios";
+
 export default function TournamentsPage() {
-  const { authFetch, createTournament } = useApi();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const user = useAuthStore((state) => state.user);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      setLoading(true);
-      try {
-        const res = await authFetch("/tournaments");
 
-        if (!res.ok) {
-          throw new Error("No se pudieron cargar los torneos");
-        }
+  const user = useAuthStore((state) => state.user);
+  const { getTournaments } = useTournament();
 
-        const data = (await res.json()) as Tournament[];
-        setTournaments(data);
-      } catch (err) {
-        setError("Ocurrió un error al conectar con el servidor.");
-      } finally {
-        setLoading(false);
+  const fetchTournaments = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getTournaments();
+      setTournaments(data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Error al cargar los torneos");
+      } else {
+        setError("Error de conexión con el servidor.");
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     void fetchTournaments();
   }, []);
+
+  const handleTournamentCreated = (newTournament: Tournament) => {
+    setTournaments((prev) => [newTournament, ...prev]);
+    setIsCreateModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -66,7 +74,7 @@ export default function TournamentsPage() {
         style={{
           marginBottom: "2rem",
           display: "flex",
-          justifyContent: "space-between", // Corregido 'between' a 'space-between' para compatibilidad CSS estándar
+          justifyContent: "space-between",
           alignItems: "flex-start",
           flexWrap: "wrap",
           gap: "1rem",
@@ -88,10 +96,9 @@ export default function TournamentsPage() {
           </p>
         </div>
 
-        {/* CORTOCIRCUITO LÓGICO: Muestra el botón de creación solo si el usuario es ADMIN */}
         {user?.role === "ADMIN" && (
           <button
-            onClick={() => setIsCreateModalOpen(true)} // ➔ Modificado para abrir el formulario modal
+            onClick={() => setIsCreateModalOpen(true)}
             style={{
               background: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
               color: "#ffffff",
@@ -117,7 +124,7 @@ export default function TournamentsPage() {
         )}
       </div>
 
-      {/* ─── GRIETA DE TORNEOS ─────────────────────────────────────────────── */}
+      {/* ─── GRILLA DE TORNEOS ─────────────────────────────────────────────── */}
       {activeTournaments.length === 0 ? (
         <div
           style={{
@@ -145,14 +152,11 @@ export default function TournamentsPage() {
         </div>
       )}
 
-      {/* ─── MODAL INTERACTIVO DE CREACIÓN (INYECTADO) ────────────────────── */}
+      {/* ─── MODAL INTERACTIVO DE CREACIÓN ────────────────────── */}
       <CreateTournamentModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onTournamentCreated={(newTournament) => {
-          // Añadimos reactivamente el torneo al inicio de la lista
-          setTournaments((prev) => [newTournament, ...prev]);
-        }}
+        onTournamentCreated={handleTournamentCreated}
       />
     </div>
   );

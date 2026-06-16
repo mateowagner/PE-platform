@@ -1,35 +1,37 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { useAuth } from "../hooks/useAuth";
+import axios from "axios";
 import "./AuthPage.css";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const { login } = useAuthStore();
+  const { loginAccount } = useAuth(); // ➔ Inyectamos nuestro servicio limpio
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Credenciales incorrectas");
-        return;
-      }
+      // ➔ Único punto de contacto con la red
+      const data = await loginAccount(form);
+
       login(data.user, data.accessToken);
       navigate("/dashboard");
-    } catch {
-      setError("Error de conexión con el servidor");
+    } catch (err) {
+      // ➔ Manejo estricto de excepciones de Axios
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Credenciales incorrectas");
+      } else {
+        setError("Error de conexión con el servidor");
+      }
     } finally {
       setLoading(false);
     }
