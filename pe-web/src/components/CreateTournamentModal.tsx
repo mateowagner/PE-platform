@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useTournament } from "../hooks/useTournaments";
+import { useTournaments } from "../hooks/useTournaments";
 import type { Tournament, TournamentType } from "../types";
 import axios from "axios";
 
@@ -14,7 +14,7 @@ export default function CreateTournamentModal({
   onClose,
   onTournamentCreated,
 }: Props) {
-  const { createTournament } = useTournament();
+  const { createTournament } = useTournaments();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

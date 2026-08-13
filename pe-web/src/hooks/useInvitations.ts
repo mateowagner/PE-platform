@@ -1,5 +1,5 @@
 import { apiClient } from "../config/apiClient";
-
+import type { Invitation } from "../types";
 export function useInvitations() {
   const sendInvitation = async (
     teamId: string,
@@ -23,5 +23,5 @@ export function useInvitations() {
     // Ajustá esta ruta si tu backend usa endpoints separados (ej: /accept o /reject)
     await apiClient.post(`/invitations/${invitationId}/respond`, { action });
   };
-  return { sendInvitation };
+  return { sendInvitation, getPendingInvitations, respondToInvitation };
 }

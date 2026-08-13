@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { useAuth } from "../hooks/useAuth";
 import axios from "axios";
 import "./AuthPage.css";
-
+import { EyeIcon, EyeOffIcon } from "../components/icons/AuthIcons";
 export default function RegisterPage() {
   const [form, setForm] = useState({
     username: "",
@@ -14,7 +14,7 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuthStore();
   const { registerAccount } = useAuth(); // ➔ Inyectamos el servicio
   const navigate = useNavigate();
@@ -88,20 +88,57 @@ export default function RegisterPage() {
           </div>
           <div className="input-group">
             <label className="input-label">Contraseña</label>
-            <input
-              className="input"
-              type="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-            />
+            <div className="input-password-wrapper">
+              <input
+                className="input"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+              <button
+                type="button"
+                className="btn-toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label className="input-label">Confirmar contraseña</label>
+            <div className="input-password-wrapper">
+              <input
+                className="input"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={form.confirm}
+                onChange={(e) => setForm({ ...form, confirm: e.target.value })}
+                required
+              />
+              {/* Ambos leen el mismo estado con icono vectorial simétrico */}
+              <button
+                type="button"
+                className="btn-toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
           </div>
           <div className="input-group">
             <label className="input-label">Confirmar contraseña</label>
             <input
               className="input"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               value={form.confirm}
               onChange={(e) => setForm({ ...form, confirm: e.target.value })}

@@ -90,16 +90,15 @@ export class AuthService {
   private async generateTokens(
     userId: string,
     username: string,
-    role: UserRole, // ➔ Cambiado de 'string' a 'UserRole' para mantener el tipado fuerte
+    role: UserRole,
   ): Promise<AuthResult> {
-    // El payload ya guarda el rol correctamente, lo dejamos intacto
     const payload = { sub: userId, username, role };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: this.config.getOrThrow<string>('JWT_SECRET'),
-        expiresIn: '15m',
-      }),
+      // ➔ Toma el secreto y los '15m' automáticamente del AuthModule
+      this.jwtService.signAsync(payload),
+
+      // El refresh sigue requiriendo sus propios datos específicos
       this.jwtService.signAsync(payload, {
         secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
         expiresIn: '30d',
@@ -119,7 +118,7 @@ export class AuthService {
         id: user!.id,
         username: user!.username,
         email: user!.email,
-        role: user!.role, // ➔ Esto ya viaja bien mapeado al cliente
+        role: user!.role,
         riotGameName: user!.riotGameName,
         riotTagLine: user!.riotTagLine,
         riotRegion: user!.riotRegion,

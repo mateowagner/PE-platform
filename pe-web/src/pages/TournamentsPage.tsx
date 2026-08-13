@@ -3,7 +3,7 @@ import type { Tournament } from "../types";
 import TournamentCard from "../components/TournamentCard";
 import { useAuthStore } from "../store/authStore";
 import CreateTournamentModal from "../components/CreateTournamentModal";
-import { useTournament } from "../hooks/useTournaments";
+import { useTournaments } from "../hooks/useTournaments";
 import axios from "axios";
 
 export default function TournamentsPage() {
@@ -13,7 +13,7 @@ export default function TournamentsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const user = useAuthStore((state) => state.user);
-  const { getTournaments } = useTournament();
+  const { getTournaments } = useTournaments();
 
   const fetchTournaments = async () => {
     setLoading(true);

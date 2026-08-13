@@ -21,7 +21,6 @@ export default function TeamPage() {
         const data = await getMyTeam();
         setTeam(data);
       } catch (error) {
-        /* Si Axios atrapa un 404 (sin equipo), cae acá directo y deja team en null */
         setTeam(null);
       } finally {
         setLoading(false);

@@ -14,6 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { Serie, SeriesStatus } from '../series/entities/series.entity'; // Ajustá el path según tu proyecto
 import { RiotService } from '../riot/riot.service';
 import { Match, MatchStatus } from '../matches/entities/match.entity';
+import { UpdateTournamentDto } from './dto/update-tournament.dto';
 @Injectable()
 export class TournamentsService {
   constructor(
@@ -304,7 +305,7 @@ export class TournamentsService {
 
   async update(
     id: string,
-    updateData: Partial<Tournament>,
+    updateData: UpdateTournamentDto,
   ): Promise<Tournament> {
     const tournament = await this.findOne(id);
     Object.assign(tournament, updateData);
@@ -319,7 +320,6 @@ export class TournamentsService {
     return await this.dataSource.getRepository(Serie).find({
       where: { tournament: { id: tournamentId } },
       relations: ['team_a', 'team_b', 'winner'],
-      // FIX 1: Quitamos createdAt ya que no está tipado en el FindOptionsOrder de esta entidad
       order: { round_order: 'ASC' },
     });
   }

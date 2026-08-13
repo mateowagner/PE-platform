@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import type { TournamentDetails } from "../types";
-import { useTournament } from "../hooks/useTournament"; // ➔ Importamos tu hook
+import { useTournaments } from "../hooks/useTournaments";
 import axios from "axios";
 
 interface Props {
@@ -12,7 +12,7 @@ export const AdminTournamentPanel: React.FC<Props> = ({
   tournament,
   onTournamentStarted,
 }) => {
-  const { startTournament } = useTournament();
+  const { startTournament } = useTournaments();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

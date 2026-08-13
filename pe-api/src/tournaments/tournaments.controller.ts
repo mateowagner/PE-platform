@@ -16,9 +16,9 @@ import { Roles } from '../auth/roles.decorator'; // ➔ Importamos tu decorador 
 import { UserRole } from '../users/entities/user.entity'; // ➔ Fuente de la verdad de los roles
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { GetUser } from '../common/decorators/get-user.decorator';
-import { Tournament } from './entities/tournament.entity';
 import { InscribeTeamDto } from './dto/inscribe-team.dto';
 import type { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
+import { UpdateTournamentDto } from './dto/update-tournament.dto';
 
 @Controller('tournaments')
 export class TournamentsController {
@@ -27,8 +27,8 @@ export class TournamentsController {
   // ─── RUTAS ADMINISTRATIVAS (PROTEGIDAS POR ROL) ───────────────────────────
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard) // ➔ Primero autentica, luego verifica rol
-  @Roles(UserRole.ADMIN) // ➔ Restringido a Administradores
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   async create(
     @Body() createTournamentDto: CreateTournamentDto,
     @GetUser('id') creatorId: string,
@@ -41,7 +41,7 @@ export class TournamentsController {
   @Roles(UserRole.ADMIN)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateTournamentDto: Partial<Tournament>,
+    @Body() updateTournamentDto: UpdateTournamentDto,
   ) {
     return await this.tournamentsService.update(id, updateTournamentDto);
   }
