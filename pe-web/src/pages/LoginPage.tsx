@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { useAuth } from "../hooks/useAuth";
 import axios from "axios";
 import "./AuthPage.css";
-
+import { EyeIcon, EyeOffIcon } from "../components/icons/AuthIcons";
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const { login } = useAuthStore();
   const { loginAccount } = useAuth(); // ➔ Inyectamos nuestro servicio limpio
   const navigate = useNavigate();
-
+  const [showPassword, setShowPassword] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -26,7 +26,6 @@ export default function LoginPage() {
       login(data.user, data.accessToken);
       navigate("/dashboard");
     } catch (err) {
-      // ➔ Manejo estricto de excepciones de Axios
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || "Credenciales incorrectas");
       } else {
@@ -63,14 +62,26 @@ export default function LoginPage() {
           </div>
           <div className="input-group">
             <label className="input-label">Contraseña</label>
-            <input
-              className="input"
-              type="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-            />
+            <div className="input-password-wrapper">
+              <input
+                className="input"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
+              <button
+                type="button"
+                className="btn-toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
           </div>
           {error && <div className="auth-error">{error}</div>}
           <button
