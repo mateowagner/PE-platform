@@ -21,7 +21,10 @@ export class CreateTournamentDto {
   @IsEnum(TournamentType)
   @IsNotEmpty()
   type!: TournamentType;
-
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
+  description?: string;
   @IsEnum(SkillTier)
   @IsNotEmpty()
   skill_tier!: SkillTier;
