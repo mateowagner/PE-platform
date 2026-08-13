@@ -1,23 +1,17 @@
 import { apiClient } from "../config/apiClient";
-import type { Tournament, TournamentDetails, TournamentSeries } from "../types";
+import type {
+  Tournament,
+  TournamentDetails,
+  TournamentSeries,
+  UpdateTournamentInput,
+} from "../types";
 
-export function useTournament() {
+export function useTournaments() {
   // --- METODOS BASE (CRUD) ---
   const createTournament = async (
     data: Partial<Tournament>,
   ): Promise<Tournament> => {
     const res = await apiClient.post<Tournament>("/tournaments", data);
-    return res.data;
-  };
-
-  const updateTournament = async (
-    id: string,
-    data: Partial<Tournament>,
-  ): Promise<TournamentDetails> => {
-    const res = await apiClient.patch<TournamentDetails>(
-      `/tournaments/${id}`,
-      data,
-    );
     return res.data;
   };
 
@@ -68,6 +62,18 @@ export function useTournament() {
     const res = await apiClient.get<Tournament[]>("/tournaments");
     return res.data;
   };
+
+  const updateTournament = async (
+    tournamentId: string,
+    data: UpdateTournamentInput,
+  ): Promise<TournamentDetails> => {
+    const res = await apiClient.patch<TournamentDetails>(
+      `/tournaments/${tournamentId}`,
+      data,
+    );
+    return res.data;
+  };
+
   return {
     createTournament,
     updateTournament,

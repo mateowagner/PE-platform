@@ -29,7 +29,10 @@ export interface Team {
   owner: { id: string; username: string };
   members: Member[];
 }
-
+export interface TournamentParticipant extends Team {
+  memberCount?: number;
+  avgTier?: string;
+}
 export interface Tournament {
   id: string;
   name: string;
@@ -50,11 +53,12 @@ export interface Tournament {
 }
 export interface TournamentDetails extends Tournament {
   currentTeamsCount: number;
-  teams: (Team & {
-    memberCount?: number;
-    avgTier?: string;
-  })[];
+  teams: TournamentParticipant[];
 }
+
+export type UpdateTournamentInput = Partial<
+  Omit<Tournament, "id" | "created_at" | "teams">
+>;
 export interface TournamentSeries {
   id: string;
   stage_name: string;
@@ -63,6 +67,7 @@ export interface TournamentSeries {
   team_a_wins: number;
   team_b_wins: number;
   wins_required: number;
+  parent_series_id?: string | null;
   team_a?: { id: string; name: string } | null;
   team_b?: { id: string; name: string } | null;
   winner?: { id: string; name: string } | null;
@@ -74,7 +79,7 @@ export interface Invitation {
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string;
   // ➔ Crucial para la UI: El backend debería incluir los datos básicos del equipo que invita
-  team?: {
+  team: {
     id: string;
     name: string;
     logoUrl?: string;
