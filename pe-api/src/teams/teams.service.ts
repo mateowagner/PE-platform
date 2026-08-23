@@ -1,171 +1,351 @@
+// pe-api/src/modules/teams/teams.service.ts
 import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { Team } from './entities/team.entity';
+import { User } from '../users/entities/user.entity';
+import {
+  Tournament,
+  TournamentStatus,
+} from '../tournaments/entities/tournament.entity';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
-import { Team } from './entities/team.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
-import { ForbiddenException, BadRequestException } from '@nestjs/common';
+
 @Injectable()
 export class TeamsService {
   constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(Team)
-    private teamsRepository: Repository<Team>,
+    private readonly teamsRepository: Repository<Team>,
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
+    @InjectRepository(Tournament)
+    private readonly tournamentsRepository: Repository<Tournament>,
   ) {}
 
-  // Crear equipo: el usuario autenticado es owner y primer miembro
-  async createWithOwner(dto: CreateTeamDto, userId: string) {
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      relations: ['team'],
-    });
-    if (!user) throw new NotFoundException('User not found');
-    if (user.team) throw new ConflictException('Ya pertenecés a un equipo');
-    if (!user.riotPuuid)
-      throw new ConflictException(
-        'Necesitás vincular tu cuenta de Riot antes de crear un equipo',
-      );
+  async createWithOwner(dto: CreateTeamDto, userId: string): Promise<Team> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const team = this.teamsRepository.create({
-      name: dto.name,
-      logoUrl: dto.logo_url,
-      owner: user,
-    });
-    const savedTeam = await this.teamsRepository.save(team);
+    try {
+      // 1. Bloqueo pesimista sobre la tabla users sin JOINs
+      const user = await queryRunner.manager
+        .createQueryBuilder(User, 'user')
+        .setLock('pessimistic_write')
+        .where('user.id = :userId', { userId })
+        .getOne();
 
-    // Asignamos al usuario como miembro del equipo
-    user.team = savedTeam;
-    await this.usersRepository.save(user);
+      if (!user) throw new NotFoundException('Usuario no encontrado.');
 
-    return this.findOne(savedTeam.id);
+      // Validar si ya tiene equipo
+      const userWithTeam = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        relations: ['team'],
+      });
+
+      if (userWithTeam?.team)
+        throw new ConflictException('Ya perteneces a un equipo.');
+      if (!user.riotPuuid) {
+        throw new ConflictException(
+          'Necesitas vincular tu cuenta de Riot antes de crear un equipo.',
+        );
+      }
+
+      const team = queryRunner.manager.create(Team, {
+        name: dto.name,
+        logoUrl: dto.logo_url,
+        owner: user,
+      });
+      const savedTeam = await queryRunner.manager.save(Team, team);
+
+      user.team = savedTeam;
+      await queryRunner.manager.save(User, user);
+
+      await queryRunner.commitTransaction();
+
+      const createdTeam = await this.findOne(savedTeam.id);
+      if (!createdTeam)
+        throw new NotFoundException('Error al recuperar el equipo creado.');
+      return createdTeam;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
-  // Buscar el equipo de un usuario por su userId
-  async findByMember(userId: string) {
+  async findByMember(userId: string): Promise<Team | null> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       relations: ['team'],
     });
     if (!user?.team) return null;
 
-    return this.teamsRepository.findOne({
-      where: { id: user.team.id },
-      relations: ['members', 'owner'],
-    });
+    return this.findOne(user.team.id);
   }
 
-  async findAll() {
+  async findAll(): Promise<Team[]> {
     return this.teamsRepository.find({ relations: ['owner'] });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<Team | null> {
     return this.teamsRepository.findOne({
       where: { id },
       relations: ['members', 'owner'],
     });
   }
 
-  async update(id: string, dto: UpdateTeamDto) {
+  async update(id: string, dto: UpdateTeamDto): Promise<Team> {
     const team = await this.teamsRepository.findOne({ where: { id } });
-    if (!team) throw new NotFoundException(`Team with id ${id} not found`);
+    if (!team) throw new NotFoundException(`Team con id ${id} no encontrado.`);
     Object.assign(team, dto);
     return this.teamsRepository.save(team);
   }
 
-  async remove(id: string) {
-    return this.teamsRepository.delete(id);
+  async remove(id: string): Promise<void> {
+    await this.assertTeamNotInActiveTournament(id);
+    const result = await this.teamsRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Team con id ${id} no encontrado.`);
+    }
   }
 
-  async getMembers(id: string) {
+  async getMembers(id: string): Promise<User[]> {
     const team = await this.teamsRepository.findOne({
       where: { id },
       relations: ['members'],
     });
-    if (!team) throw new NotFoundException(`Team with id ${id} not found`);
+    if (!team) throw new NotFoundException(`Team con id ${id} no encontrado.`);
     return team.members;
   }
+
   async removeMember(
     teamId: string,
     captainId: string,
     memberId: string,
   ): Promise<Team> {
-    // 1. Obtener el equipo con su dueño y sus miembros
-    const team = await this.teamsRepository.findOne({
-      where: { id: teamId },
-      relations: ['owner', 'members'],
-    });
+    await this.assertTeamNotInActiveTournament(teamId);
 
-    if (!team) {
-      throw new NotFoundException('El equipo especificado no existe.');
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Bloqueo atómico puro sobre la fila del equipo (sin joins)
+      const team = await queryRunner.manager
+        .createQueryBuilder(Team, 'team')
+        .setLock('pessimistic_write')
+        .where('team.id = :teamId', { teamId })
+        .getOne();
+
+      if (!team)
+        throw new NotFoundException('El equipo especificado no existe.');
+
+      // Consultar el owner por separado para evitar outer joins con lock
+      const teamWithOwner = await queryRunner.manager.findOne(Team, {
+        where: { id: teamId },
+        relations: ['owner'],
+      });
+
+      if (teamWithOwner?.owner.id !== captainId) {
+        throw new ForbiddenException(
+          'Operación denegada. Solo el capitán puede remover miembros.',
+        );
+      }
+      if (memberId === captainId) {
+        throw new BadRequestException(
+          'No puedes eliminarte a ti mismo del equipo. Utiliza la opción de salir o transfiere la capitanía.',
+        );
+      }
+
+      // 2. Bloqueo atómico puro sobre la fila del miembro (sin joins)
+      const member = await queryRunner.manager
+        .createQueryBuilder(User, 'user')
+        .setLock('pessimistic_write')
+        .where('user.id = :memberId', { memberId })
+        .getOne();
+
+      if (!member) {
+        throw new BadRequestException('El jugador especificado no existe.');
+      }
+
+      // Validar pertenencia del usuario
+      const memberWithTeam = await queryRunner.manager.findOne(User, {
+        where: { id: memberId },
+        relations: ['team'],
+      });
+
+      if (!memberWithTeam?.team || memberWithTeam.team.id !== teamId) {
+        throw new BadRequestException(
+          'El jugador especificado no pertenece a este equipo.',
+        );
+      }
+
+      // 3. Romper relación actualizando la FK
+      member.team = null as unknown as Team;
+      await queryRunner.manager.save(User, member);
+
+      await queryRunner.commitTransaction();
+
+      const updatedTeam = await this.findOne(teamId);
+      if (!updatedTeam)
+        throw new NotFoundException(
+          'Error al recuperar el equipo actualizado.',
+        );
+      return updatedTeam;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    // 2. VALIDACIÓN: Solo el capitán puede echar gente
-    if (team.owner.id !== captainId) {
-      throw new ForbiddenException(
-        'Operación denegada. Solo el capitán puede remover miembros.',
-      );
-    }
-
-    // 3. VALIDACIÓN: El capitán no puede echarse a sí mismo
-    if (memberId === captainId) {
-      throw new BadRequestException(
-        'No puedes eliminarte a ti mismo del equipo. Utiliza la opción de salir.',
-      );
-    }
-
-    // 4. VALIDACIÓN: Verificar que el usuario realmente pertenezca al equipo
-    const memberIndex = team.members.findIndex((m) => m.id === memberId);
-    if (memberIndex === -1) {
-      throw new BadRequestException(
-        'El jugador especificado no pertenece a este equipo.',
-      );
-    }
-
-    // 5. Romper la relación: sacamos al miembro del arreglo del equipo
-    team.members.splice(memberIndex, 1);
-
-    // 6. Guardamos el equipo actualizado y lo retornamos para refrescar el front
-    return await this.teamsRepository.save(team);
   }
+
   async leaveTeam(userId: string): Promise<void> {
-    // 1. Buscar al usuario con su relación de equipo
-    const user = await this.usersRepository.findOne({
-      where: { id: userId },
-      relations: ['team'],
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Bloqueo puro sobre el usuario
+      const user = await queryRunner.manager
+        .createQueryBuilder(User, 'user')
+        .setLock('pessimistic_write')
+        .where('user.id = :userId', { userId })
+        .getOne();
+
+      if (!user) throw new NotFoundException('El usuario no existe.');
+
+      const userWithTeam = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        relations: ['team'],
+      });
+
+      if (!userWithTeam?.team) {
+        throw new BadRequestException(
+          'No perteneces a ningún equipo actualmente.',
+        );
+      }
+
+      const teamId = userWithTeam.team.id;
+      await this.assertTeamNotInActiveTournament(teamId);
+
+      const team = await queryRunner.manager.findOne(Team, {
+        where: { id: teamId },
+        relations: ['owner'],
+      });
+
+      if (team && team.owner.id === userId) {
+        throw new BadRequestException(
+          'Como capitán, no puedes abandonar el equipo directamente. Debes transferir el liderazgo o disolver el equipo.',
+        );
+      }
+
+      user.team = null as unknown as Team;
+      await queryRunner.manager.save(User, user);
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async transferOwnership(
+    teamId: string,
+    currentOwnerId: string,
+    newOwnerId: string,
+  ): Promise<Team> {
+    if (currentOwnerId === newOwnerId) {
+      throw new BadRequestException('Ya eres el capitán de este equipo.');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Bloqueo puro sobre el equipo
+      const team = await queryRunner.manager
+        .createQueryBuilder(Team, 'team')
+        .setLock('pessimistic_write')
+        .where('team.id = :teamId', { teamId })
+        .getOne();
+
+      if (!team) throw new NotFoundException('El equipo no existe.');
+
+      const teamWithOwner = await queryRunner.manager.findOne(Team, {
+        where: { id: teamId },
+        relations: ['owner'],
+      });
+
+      if (teamWithOwner?.owner.id !== currentOwnerId) {
+        throw new ForbiddenException(
+          'Solo el capitán actual puede transferir la capitanía.',
+        );
+      }
+
+      // 2. Bloqueo puro sobre el nuevo dueño
+      const newOwner = await queryRunner.manager
+        .createQueryBuilder(User, 'user')
+        .setLock('pessimistic_write')
+        .where('user.id = :newOwnerId', { newOwnerId })
+        .getOne();
+
+      if (!newOwner) {
+        throw new BadRequestException('El usuario designado no existe.');
+      }
+
+      const newOwnerWithTeam = await queryRunner.manager.findOne(User, {
+        where: { id: newOwnerId },
+        relations: ['team'],
+      });
+
+      if (newOwnerWithTeam?.team?.id !== teamId) {
+        throw new BadRequestException(
+          'El nuevo capitán debe ser un miembro activo del equipo.',
+        );
+      }
+
+      team.owner = newOwner;
+      await queryRunner.manager.save(Team, team);
+
+      await queryRunner.commitTransaction();
+
+      const updatedTeam = await this.findOne(teamId);
+      if (!updatedTeam)
+        throw new NotFoundException('Error al recuperar el equipo.');
+      return updatedTeam;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  private async assertTeamNotInActiveTournament(teamId: string): Promise<void> {
+    const activeTournaments = await this.tournamentsRepository.find({
+      where: {
+        teams: { id: teamId },
+        status: TournamentStatus.STARTED,
+      },
     });
 
-    if (!user) {
-      throw new NotFoundException('El usuario no existe.');
-    }
-
-    // 2. VALIDACIÓN: Verificar si realmente tiene un equipo
-    if (!user.team) {
-      throw new BadRequestException(
-        'No perteneces a ningún equipo actualmente.',
+    if (activeTournaments.length > 0) {
+      throw new ConflictException(
+        'Roster Lock activo: No se pueden realizar modificaciones ni abandonar el equipo mientras compite en torneos en progreso.',
       );
     }
-
-    // 3. Obtener el equipo para chequear el dueño
-    const team = await this.teamsRepository.findOne({
-      where: { id: user.team.id },
-      relations: ['owner'],
-    });
-
-    // 4. VALIDACIÓN CRÍTICA: El capitán no puede usar este flujo
-    if (team && team.owner.id === userId) {
-      throw new BadRequestException(
-        'Como capitán, no podés abandonar el equipo directamente. Debés transferir el liderazgo o disolver el equipo.',
-      );
-    }
-
-    // 5. Romper la relación sacando el equipo del usuario
-    user.team = null;
-    await this.usersRepository.save(user);
   }
 }
