@@ -46,8 +46,8 @@ export class User {
 
   // ─── Riot Account ────────────────────────────────────────────────────────
 
-  @Column({ name: 'riot_puuid', nullable: true, unique: true })
-  riotPuuid!: string;
+  @Column({ name: 'riot_puuid', type: 'varchar', nullable: true, unique: true })
+  riotPuuid?: string;
 
   @Column({ name: 'riot_game_name', nullable: true })
   riotGameName!: string;
