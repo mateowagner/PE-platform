@@ -1,0 +1,312 @@
+/* pe-web/src/components/RosterSelectorModal.css */
+
+.roster-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(6, 7, 10, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+  padding: 1rem;
+}
+
+.roster-modal-container {
+  background: #0d0e14;
+  border: 1px solid #1e2233;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+
+.roster-modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #1a1c28;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.roster-header-title-flex {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.roster-header-title-flex h3 {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.15rem;
+  color: #f3f4f6;
+  text-transform: uppercase;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.roster-header-title-flex p {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 4px;
+}
+
+.btn-close-modal:hover {
+  background: #181924;
+  color: #ffffff;
+}
+
+.roster-status-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: #11131c;
+  border-bottom: 1px solid #1a1c28;
+}
+
+.roster-counter-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.roster-counter-pill strong {
+  color: #06b6d4;
+}
+
+.roster-legend-tags {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.legend-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.legend-starter {
+  background: #eab308;
+  border: 1px solid #ca8a04;
+  color: #000000 !important;
+}
+
+.legend-starter svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+.legend-sub {
+  background: #c084fc;
+  border: 1px solid #a855f7;
+  color: #000000 !important;
+}
+
+.legend-sub svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+.roster-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+  padding: 0.65rem 1.5rem;
+  color: #ef4444;
+  font-size: 0.8rem;
+}
+
+.roster-players-scroll {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 380px;
+}
+
+.roster-player-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #13141d;
+  border: 1px solid #1e2233;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.card-available:hover {
+  border-color: #06b6d4;
+  background: #171924;
+}
+
+/* Titulares: Dorado Neón */
+.card-starter {
+  background: radial-gradient(circle at top left, #1f1b10 0%, #13141d 100%);
+  border: 1px solid #eab308;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.15);
+}
+
+/* Suplentes: Púrpura Neón */
+.card-sub {
+  background: radial-gradient(circle at top left, #1c1326 0%, #13141d 100%);
+  border: 1px solid #a855f7;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.15);
+}
+
+/* Jugadores Bloqueados */
+.card-blocked {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: #0f1015;
+  border-color: #1a1a24;
+}
+
+.player-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.player-avatar-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: #1e2233;
+  color: #f3f4f6;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.player-names-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.player-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f3f4f6;
+}
+
+.player-riot-id {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.player-tier-sub {
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.player-tier-sub strong {
+  color: #06b6d4;
+}
+
+.role-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Titulares (Texto e icono en negro) */
+.role-starter {
+  background: #eab308;
+  color: #000000 !important;
+  border: 1px solid #ca8a04;
+}
+
+.role-starter svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+  fill: none !important;
+}
+
+/* Suplentes (Fondo lila claro con texto e icono en negro para contraste nítido) */
+.role-sub {
+  background: #c084fc;
+  color: #000000 !important;
+  border: 1px solid #a855f7;
+}
+
+.role-sub svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+.status-selectable-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #9ca3af;
+  border: 1px dashed #2e334d;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.status-blocked-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.roster-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #1a1c28;
+  background: #0b0c12;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.roster-footer-help {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #6b7280;
+  max-width: 280px;
+}
+
+.roster-footer-actions {
+  display: flex;
+  gap: 0.6rem;
+}

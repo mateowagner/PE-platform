@@ -1,19 +1,43 @@
-import { useEffect, useState } from "react";
+// pe-web/src/pages/TournamentDetailPage.tsx
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { AdminTournamentPanel } from "../components/AdminTournamentPanel";
 import { TournamentHeader } from "../components/TournamentHeader";
 import { TournamentSidebar } from "../components/TournamentSidebar";
-import { ArrowLeft, Trophy, Users } from "lucide-react";
-import "./TournamentDetailPage.css";
-import type { TournamentDetails, TournamentSeries } from "../types";
-import { useTournaments } from "../hooks/useTournaments";
-import { useTeams } from "../hooks/useTeams";
-import axios from "axios";
 import { CupBracket } from "../components/CupBracket";
-import { LeagueMatchList } from "../components/LeagueMatchList";
+import { LeagueWorkspace } from "../components/LeagueWorkspace";
 import { CancelInscriptionModal } from "../components/CancelInscriptionModal";
 import { EditTournamentModal } from "../components/EditTournamentModal";
+import { RosterSelectorModal } from "../components/RosterSelectorModal";
+import { ChampionTrophyModal } from "../components/ChampionTrophyModal";
+import { ArrowLeft, Trophy, Users, ShieldAlert } from "lucide-react";
+import { useTournaments } from "../hooks/useTournaments";
+import { useTeams } from "../hooks/useTeams";
+import { apiClient } from "../config/apiClient";
+import type {
+  TournamentDetails,
+  TournamentSeries,
+  Team,
+  Member,
+} from "../types";
+import axios from "axios";
+import "./TournamentDetailPage.css";
+
+interface LeagueStanding {
+  pos: number;
+  team: Team;
+  pts: number;
+  pj: number;
+  pg: number;
+  pp: number;
+  diffMaps: number;
+}
+
+interface RosterApiResponse {
+  user: Member;
+  is_substitute: boolean;
+}
 
 export default function TournamentDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,14 +46,24 @@ export default function TournamentDetailsPage() {
 
   const [tournament, setTournament] = useState<TournamentDetails | null>(null);
   const [series, setSeries] = useState<TournamentSeries[]>([]);
+  const [standings, setStandings] = useState<LeagueStanding[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const [myTeam, setMyTeam] = useState<any | null>(null);
+  const [myTeam, setMyTeam] = useState<Team | null>(null);
   const [checkingTeam, setCheckingTeam] = useState(true);
+
+  // Roster Oficial Inscripto
+  const [registeredStarters, setRegisteredStarters] = useState<Member[]>([]);
+  const [registeredSubs, setRegisteredSubs] = useState<Member[]>([]);
+
+  // Modales
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showRosterModal, setShowRosterModal] = useState(false);
+  const [showChampionModal, setShowChampionModal] = useState(false);
+  const [overrideSeriesId, setOverrideSeriesId] = useState<string | null>(null);
 
   const {
     getTournamentDetails,
@@ -40,6 +74,26 @@ export default function TournamentDetailsPage() {
   } = useTournaments();
 
   const { getMyTeam } = useTeams();
+
+  const fetchRosterData = async (tourneyId: string, teamId: string) => {
+    try {
+      const res = await apiClient.get<RosterApiResponse[]>(
+        `/rosters/tournament/${tourneyId}?teamId=${teamId}`,
+      );
+      if (Array.isArray(res.data)) {
+        const starters = res.data
+          .filter((r) => !r.is_substitute)
+          .map((r) => r.user);
+        const subs = res.data.filter((r) => r.is_substitute).map((r) => r.user);
+
+        setRegisteredStarters(starters);
+        setRegisteredSubs(subs);
+      }
+    } catch {
+      setRegisteredStarters([]);
+      setRegisteredSubs([]);
+    }
+  };
 
   const fetchDetails = async () => {
     if (!id) return;
@@ -53,6 +107,30 @@ export default function TournamentDetailsPage() {
       ) {
         const dataSeries = await getTournamentSeries(id);
         setSeries(dataSeries);
+
+        if (dataDetails.type === "LEAGUE") {
+          try {
+            const { data: standingsData } = await apiClient.get<unknown[]>(
+              `/standings/tournament/${id}`,
+            );
+            const formattedStandings: LeagueStanding[] = (
+              standingsData as Record<string, unknown>[]
+            ).map((s, idx) => ({
+              pos: idx + 1,
+              team: s.team as Team,
+              pts: s.points as number,
+              pj: s.series_played as number,
+              pg: s.series_won as number,
+              pp: s.series_lost as number,
+              diffMaps:
+                ((s.matches_won as number) || 0) -
+                ((s.matches_lost as number) || 0),
+            }));
+            setStandings(formattedStandings);
+          } catch {
+            setStandings([]);
+          }
+        }
       }
     } catch {
       setErrorMessage("No se pudo cargar la información del torneo.");
@@ -72,11 +150,14 @@ export default function TournamentDetailsPage() {
         try {
           const teamData = await getMyTeam();
           setMyTeam(teamData);
+          if (teamData?.id && id) {
+            await fetchRosterData(id, teamData.id);
+          }
         } catch {
           setMyTeam(null);
         }
-      } catch (err) {
-        setErrorMessage("No se pudo cargar la información necesaria.");
+      } catch {
+        setErrorMessage("No se pudo cargar la información inicial.");
       } finally {
         setCheckingTeam(false);
       }
@@ -85,23 +166,41 @@ export default function TournamentDetailsPage() {
     if (id) void loadData();
   }, [id]);
 
-  const handleInscribe = async () => {
-    if (!tournament || !myTeam?.id || !id) return;
-
+  const handleConfirmRoster = async (starters: string[], subs: string[]) => {
+    if (!id || !myTeam) return;
     setActionLoading(true);
-    setErrorMessage(null);
 
     try {
-      await inscribeTeam(id, myTeam.id);
-      await fetchDetails();
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setErrorMessage(
-          err.response?.data?.message || "No se pudo completar la inscripción.",
-        );
-      } else {
-        setErrorMessage("Error de conexión con el servidor.");
+      const isAlreadyInscribed = tournament?.teams.some(
+        (t) => t.id === myTeam.id,
+      );
+      if (!isAlreadyInscribed) {
+        await inscribeTeam(id, myTeam.id);
       }
+
+      const membersPayload = [
+        ...starters.map((userId) => ({ userId, isSubstitute: false })),
+        ...subs.map((userId) => ({ userId, isSubstitute: true })),
+      ];
+
+      await apiClient.post(`/rosters/tournament/${id}`, {
+        teamId: myTeam.id,
+        members: membersPayload,
+      });
+
+      await fetchDetails();
+      await fetchRosterData(id, myTeam.id);
+      setShowRosterModal(false);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        throw new Error(
+          Array.isArray(err.response?.data?.message)
+            ? err.response?.data?.message.join(", ")
+            : err.response?.data?.message ||
+                "Fallo en la confirmación de la plantilla.",
+        );
+      }
+      throw new Error("Error de conexión al guardar el roster.");
     } finally {
       setActionLoading(false);
     }
@@ -115,9 +214,11 @@ export default function TournamentDetailsPage() {
 
     try {
       await cancelInscription(id, myTeam.id);
+      setRegisteredStarters([]);
+      setRegisteredSubs([]);
       await fetchDetails();
       setShowCancelModal(false);
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setErrorMessage(
           err.response?.data?.message || "No se pudo cancelar la inscripción.",
@@ -133,81 +234,106 @@ export default function TournamentDetailsPage() {
 
   const handleDeleteTournament = async () => {
     if (!id) return;
-
     const confirmed = window.confirm(
-      `🚨 ¡ALERTA! ¿Estás seguro de que querés eliminar el torneo "${tournament?.name}"?\nEsta acción borrará todas las llaves, series y registros asociados de forma permanente.`,
+      `🚨 ¡ALERTA! ¿Estás seguro de que deseas eliminar el torneo "${tournament?.name}"?`,
     );
-
     if (!confirmed) return;
 
     setActionLoading(true);
-    setErrorMessage(null);
-
     try {
       await deleteTournament(id);
       navigate("/tournaments");
-    } catch (err: any) {
-      setErrorMessage(
-        err.message ||
-          "Error al intentar eliminar el torneo. Comprobá tus permisos.",
-      );
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setErrorMessage(error.message || "Error al intentar eliminar el torneo.");
     } finally {
       setActionLoading(false);
     }
   };
 
-  if (loading || checkingTeam)
-    return <div className="loading-container">Cargando torneo...</div>;
-  if (!tournament)
+  const handleAdminOverrideWinner = async (winnerTeamId: string) => {
+    if (!overrideSeriesId) return;
+    try {
+      setActionLoading(true);
+      await apiClient.post(`/series/${overrideSeriesId}/override-winner`, {
+        winnerTeamId,
+      });
+      setOverrideSeriesId(null);
+      await fetchDetails();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        alert(err.response?.data?.message || "Error al resolver la serie.");
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const winningTeamData = useMemo(() => {
+    if (tournament?.status !== "FINISHED") return null;
+
+    if (tournament.type === "CUP") {
+      const finalSeries = series.find((s) => s.stage_name === "Gran Final");
+      return finalSeries?.winner ? (finalSeries.winner as Team) : null;
+    }
+
+    if (tournament.type === "LEAGUE" && standings.length > 0) {
+      return standings[0].team;
+    }
+
+    return null;
+  }, [tournament, series, standings]);
+
+  if (loading || checkingTeam) {
     return (
-      <div className="error-container">
-        ⚠️ {errorMessage || "Torneo no encontrado."}
+      <div className="tournament-fullscreen-root loading-wrapper">
+        <div className="empty-state">Cargando torneo y escuadras...</div>
       </div>
     );
+  }
+
+  if (!tournament) {
+    return (
+      <div className="tournament-fullscreen-root error-wrapper">
+        <div className="auth-error">
+          {errorMessage || "Torneo no encontrado."}
+        </div>
+      </div>
+    );
+  }
 
   const isAlreadyInscribed =
     myTeam && tournament.teams.some((t) => t.id === myTeam.id);
+  const isAdminOrStaff = user?.role === "ADMIN" || user?.role === "STAFF";
 
   return (
-    <div
-      className={`page-container tournament-details-page fade-in ${tournament.status !== "PREPARING" ? "layout-competition-view" : ""}`}
-    >
-      <div className="tournament-top-bar">
-        <button className="btn-back" onClick={() => navigate(-1)}>
+    <div className="tournament-fullscreen-root fade-in">
+      {/* Barra Superior */}
+      <div className="tournament-top-strip">
+        <button type="button" className="btn-back" onClick={() => navigate(-1)}>
           <ArrowLeft size={16} /> Volver
         </button>
+
+        {tournament.status === "FINISHED" && winningTeamData && (
+          <button
+            type="button"
+            className="btn btn-neon-gold"
+            onClick={() => setShowChampionModal(true)}
+          >
+            <Trophy size={16} /> Ver Celebración de Campeón
+          </button>
+        )}
       </div>
 
-      {user?.role === "ADMIN" && (
-        <div
-          className="admin-zone-bar"
-          style={{
-            background: "rgba(124, 58, 237, 0.05)",
-            border: "1px solid rgba(124, 58, 237, 0.2)",
-            padding: "1rem",
-            borderRadius: "8px",
-            marginBottom: "1.5rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "1rem",
-          }}
-        >
-          <div
-            style={{
-              color: "var(--text-primary)",
-              fontSize: "0.85rem",
-              fontWeight: "bold",
-              fontFamily: "var(--font-display)",
-              letterSpacing: "0.5px",
-            }}
-          >
-            ⚙️ PANEL DE CONTROL DE ADMINISTRADOR
+      {/* Panel Admin */}
+      {isAdminOrStaff && (
+        <div className="admin-zone-bar">
+          <div className="admin-title">
+            <ShieldAlert size={18} color="#ef4444" />
+            <span>PANEL DE CONTROL ADMINISTRATIVO</span>
           </div>
 
-          <div
-            style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}
-          >
+          <div className="admin-actions">
             <AdminTournamentPanel
               tournament={tournament}
               onTournamentStarted={async (updatedTournament) => {
@@ -218,30 +344,19 @@ export default function TournamentDetailsPage() {
 
             {tournament.status === "PREPARING" && (
               <button
+                type="button"
                 onClick={() => setShowEditModal(true)}
-                className="btn btn-outline"
-                style={{
-                  padding: "0.5rem 1rem",
-                  fontSize: "0.85rem",
-                  height: "38px",
-                }}
+                className="btn btn-outline btn-sm"
               >
                 Editar Datos
               </button>
             )}
 
             <button
+              type="button"
               onClick={handleDeleteTournament}
               disabled={actionLoading || tournament.status !== "PREPARING"}
-              className="btn btn-danger"
-              style={{
-                padding: "0.5rem 1rem",
-                fontSize: "0.85rem",
-                height: "38px",
-                cursor:
-                  tournament.status === "PREPARING" ? "pointer" : "not-allowed",
-                opacity: tournament.status === "PREPARING" ? 1 : 0.4,
-              }}
+              className="btn btn-danger btn-sm"
             >
               {actionLoading ? "Eliminando..." : "Eliminar Torneo"}
             </button>
@@ -249,6 +364,31 @@ export default function TournamentDetailsPage() {
         </div>
       )}
 
+      {/* Banner Principal de Torneo */}
+      <div className="competition-banner-full">
+        <div className="banner-side-empty" />
+        <div className="banner-center-info">
+          <h1 className="comp-title">{tournament.name}</h1>
+          <p className="comp-subtitle">
+            {tournament.type === "LEAGUE"
+              ? "LIGA OFICIAL"
+              : "COPA ELIMINATORIA"}{" "}
+            • TIER {tournament.skill_tier}
+          </p>
+        </div>
+        <div className="comp-mini-stats">
+          <div className="mini-stat-pill">
+            <Trophy size={14} />{" "}
+            <span>{tournament.prize_pool || "Gloria & Puntos"}</span>
+          </div>
+          <div className="mini-stat-pill">
+            <Users size={14} />{" "}
+            <span>{tournament.currentTeamsCount} Escuadras</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid Principal */}
       {tournament.status === "PREPARING" ? (
         <div className="tournament-grid-layout">
           <TournamentHeader
@@ -256,8 +396,11 @@ export default function TournamentDetailsPage() {
             user={user}
             myTeam={myTeam}
             isAlreadyInscribed={!!isAlreadyInscribed}
+            registeredStarters={registeredStarters}
+            registeredSubs={registeredSubs}
             actionLoading={actionLoading}
-            onInscribe={handleInscribe}
+            onInscribe={() => setShowRosterModal(true)}
+            onEditRoster={() => setShowRosterModal(true)}
             onCancel={() => setShowCancelModal(true)}
           />
           <TournamentSidebar
@@ -266,44 +409,37 @@ export default function TournamentDetailsPage() {
           />
         </div>
       ) : (
-        <div className="competition-workspace">
-          <div className="competition-minimal-header">
-            <div>
-              <h1 className="comp-title">{tournament.name}</h1>
-              <p className="comp-subtitle">
-                {String(tournament.type)} • TIER {tournament.skill_tier} • ETAPA
-                ACTUAL:{" "}
-                <span className="highlight-purple">
-                  {tournament.current_stage}
-                </span>
-              </p>
-            </div>
-            <div className="comp-mini-stats">
-              <div className="mini-stat-pill">
-                <Trophy size={14} />{" "}
-                <span>{tournament.prize_pool || "Honor"}</span>
-              </div>
-              <div className="mini-stat-pill">
-                <Users size={14} />{" "}
-                <span>{tournament.currentTeamsCount} Escuadras</span>
-              </div>
-            </div>
-          </div>
-
+        <div className="competition-workspace-full">
           {tournament.type === "LEAGUE" && (
-            <LeagueMatchList
+            <LeagueWorkspace
               series={series}
-              onMatchClick={(id) => navigate(`/series/${id}`)}
+              userTeamId={myTeam?.id}
+              standings={standings}
+              isAdmin={isAdminOrStaff}
+              onAdminOverride={(seriesId) => setOverrideSeriesId(seriesId)}
             />
           )}
 
           {tournament.type === "CUP" && (
             <CupBracket
               series={series}
-              onMatchClick={(id) => navigate(`/series/${id}`)}
+              onMatchClick={(seriesId) => navigate(`/series/${seriesId}`)}
             />
           )}
         </div>
+      )}
+
+      {/* Modal de Selección y Edición de Roster */}
+      {showRosterModal && myTeam && (
+        <RosterSelectorModal
+          tournament={tournament}
+          availableMembers={myTeam.members || []}
+          initialStarters={registeredStarters.map((m) => m.id)}
+          initialSubs={registeredSubs.map((m) => m.id)}
+          isOpen={showRosterModal}
+          onClose={() => setShowRosterModal(false)}
+          onConfirm={handleConfirmRoster}
+        />
       )}
 
       {showCancelModal && (
@@ -314,15 +450,95 @@ export default function TournamentDetailsPage() {
           onConfirm={handleCancelInscription}
         />
       )}
-      {/* NUEVO MODAL DE EDICIÓN */}
+
       {showEditModal && (
         <EditTournamentModal
           tournament={tournament}
           onClose={() => setShowEditModal(false)}
           onSuccess={async () => {
-            await fetchDetails(); // Recarga la vista con los nuevos datos
+            await fetchDetails();
           }}
         />
+      )}
+
+      {showChampionModal && winningTeamData && (
+        <ChampionTrophyModal
+          tournamentName={tournament.name}
+          winnerTeam={winningTeamData}
+          starters={winningTeamData.members || []}
+          isOpen={showChampionModal}
+          onClose={() => setShowChampionModal(false)}
+        />
+      )}
+
+      {overrideSeriesId && (
+        <div className="modal-backdrop">
+          <div className="modal-container" style={{ maxWidth: "420px" }}>
+            <h3 style={{ color: "#f3f4f6", marginBottom: "0.5rem" }}>
+              Resolución de Serie
+            </h3>
+            <p
+              style={{
+                color: "#9ca3af",
+                fontSize: "0.85rem",
+                marginBottom: "1.25rem",
+              }}
+            >
+              Selecciona el equipo vencedor para avanzar la llave o computar
+              puntos en la tabla.
+            </p>
+            {(() => {
+              const targetSeries = series.find(
+                (s) => s.id === overrideSeriesId,
+              );
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={!targetSeries?.team_a}
+                    onClick={() =>
+                      handleAdminOverrideWinner(targetSeries?.team_a?.id || "")
+                    }
+                  >
+                    Vencedor: {targetSeries?.team_a?.name || "Equipo A"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    disabled={!targetSeries?.team_b}
+                    onClick={() =>
+                      handleAdminOverrideWinner(targetSeries?.team_b?.id || "")
+                    }
+                  >
+                    Vencedor: {targetSeries?.team_b?.name || "Equipo B"}
+                  </button>
+                </div>
+              );
+            })()}
+            <div
+              style={{
+                marginTop: "1.25rem",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => setOverrideSeriesId(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

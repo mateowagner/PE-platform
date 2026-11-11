@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// pe-api/src/users/users.service.ts
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -98,6 +103,17 @@ export class UsersService {
     const user = await this.usersRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException(`User with id ${userId} not found`);
 
+    // Validación anti-colisión de cuenta de League of Legends
+    const existingUserWithPuuid = await this.usersRepository.findOneBy({
+      riotPuuid: data.riotPuuid,
+    });
+
+    if (existingUserWithPuuid && existingUserWithPuuid.id !== userId) {
+      throw new ConflictException(
+        'Esta cuenta de League of Legends ya se encuentra vinculada a otro usuario.',
+      );
+    }
+
     user.riotPuuid = data.riotPuuid;
     user.riotGameName = data.riotGameName;
     user.riotTagLine = data.riotTagLine;
@@ -111,6 +127,6 @@ export class UsersService {
     user.rankPoints = data.rankPoints;
     user.rankUpdatedAt = data.rankUpdatedAt;
 
-    await this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 }

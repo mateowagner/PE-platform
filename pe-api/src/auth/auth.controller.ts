@@ -1,3 +1,4 @@
+// pe-api/src/auth/auth.controller.ts
 import {
   Controller,
   Post,
@@ -54,7 +55,7 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   maxAge: 30 * 24 * 60 * 60 * 1000,
-  path: '/auth',
+  path: '/',
 };
 
 function withoutRefreshToken(
@@ -103,10 +104,15 @@ export class AuthController {
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @Body('refreshToken') bodyToken?: string,
   ) {
-    const cookies = req.cookies as Record<string, string>;
-    const refreshToken = cookies[REFRESH_COOKIE];
-    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+    // Lectura protegida: primero desde cookies, luego desde el cuerpo
+    const cookies = (req.cookies ?? {}) as Record<string, string>;
+    const refreshToken = cookies[REFRESH_COOKIE] || bodyToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('No refresh token provided');
+    }
 
     let payload: JwtPayload;
     try {
@@ -133,7 +139,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(req.user.id);
-    res.clearCookie(REFRESH_COOKIE, { path: '/auth' });
+    res.clearCookie(REFRESH_COOKIE, { path: '/' });
     return { message: 'Logged out successfully' };
   }
 
@@ -155,7 +161,6 @@ export class AuthController {
   ) {
     const riotData = await this.riotService.getAccountData(dto.riotId);
 
-    // Verificamos que la cuenta Riot no esté vinculada a otro usuario
     const existing = await this.usersService.findByPuuid(riotData.puuid);
     if (existing && existing.id !== req.user.id) {
       throw new ConflictException(

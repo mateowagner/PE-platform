@@ -1,0 +1,445 @@
+/* pe-web/src/components/LeagueWorkspace.css */
+
+.league-workspace-root {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .league-workspace-root {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── TARJETAS CONTENEDORAS ────────────────────────────────────────────────── */
+.league-standings-card,
+.league-fixture-card {
+  background: #0d0e14;
+  border: 1px solid #1e2233;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.card-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-header-title h3 {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.15rem;
+  color: #f3f4f6;
+  text-transform: uppercase;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.standings-meta-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #9333ea;
+  background: rgba(147, 51, 234, 0.12);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+
+/* ─── TABLA DE POSICIONES ─────────────────────────────────────────────────── */
+.table-responsive-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.league-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.league-table th {
+  padding: 0.75rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #6b7280;
+  text-transform: uppercase;
+  border-bottom: 1px solid #1e2233;
+}
+
+.league-table td {
+  padding: 0.85rem 0.6rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #151622;
+  color: #d1d5db;
+}
+
+.th-pos,
+.td-pos {
+  width: 36px;
+  text-align: center;
+}
+
+.th-stat,
+.td-stat {
+  text-align: center;
+  font-family: var(--font-display, sans-serif);
+  font-weight: 700;
+}
+
+.stat-pts {
+  color: #06b6d4 !important;
+  font-size: 0.95rem !important;
+  font-weight: 900 !important;
+}
+
+.pos-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: #181a24;
+  color: #9ca3af;
+}
+
+.pos-1 {
+  background: rgba(234, 179, 8, 0.2);
+  color: #fde047;
+  border: 1px solid #eab308;
+}
+
+.pos-2 {
+  background: rgba(6, 182, 212, 0.2);
+  color: #67e8f9;
+  border: 1px solid #06b6d4;
+}
+
+.standing-team-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.standing-team-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.standing-team-name {
+  font-weight: 600;
+  color: #f3f4f6;
+  max-width: 160px;
+}
+
+.row-user-team {
+  background: rgba(6, 182, 212, 0.05);
+}
+
+.row-playoff-zone td:first-child {
+  border-left: 2px solid #eab308;
+}
+
+.my-team-pill {
+  font-size: 0.6rem;
+  font-weight: 900;
+  background: #06b6d4;
+  color: #06070a;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.td-empty {
+  text-align: center;
+  padding: 2rem 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* ─── JORNADAS & SELECTORES ────────────────────────────────────────────────── */
+.round-selector-strip {
+  display: flex;
+  gap: 0.35rem;
+  background: #141520;
+  padding: 0.25rem;
+  border-radius: 6px;
+  border: 1px solid #222536;
+}
+
+.round-tab-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.round-tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.round-tab-btn.tab-active {
+  background: #06b6d4;
+  color: #06070a;
+}
+
+/* ─── LISTA DE ENCUENTROS ──────────────────────────────────────────────────── */
+.league-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.league-match-card {
+  background: #111218;
+  border: 1px solid #1e2233;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: all 0.2s ease;
+}
+
+.league-match-card:hover {
+  border-color: #06b6d4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.2);
+}
+
+.match-user-highlight {
+  border-color: rgba(6, 182, 212, 0.5);
+  background: radial-gradient(circle at top left, #121824 0%, #111218 100%);
+}
+
+.match-live {
+  border-color: #ef4444;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.3);
+}
+
+.match-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.match-index-label {
+  color: #9ca3af;
+}
+
+.format-badge {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  color: #06b6d4;
+}
+
+.live-pulse-badge {
+  color: #ef4444;
+  font-weight: 900;
+  animation: blink 1.2s infinite;
+}
+
+.match-teams-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.match-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.team-meta-flex {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+.match-team-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.match-team-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #d1d5db;
+  max-width: 170px;
+}
+
+.match-score {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #6b7280;
+}
+
+.match-team-row.is-winner .match-team-name {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.match-team-row.is-winner .match-score {
+  color: #06b6d4;
+  font-weight: 900;
+}
+
+.match-team-row.is-loser {
+  opacity: 0.35;
+}
+
+.match-divider-line {
+  height: 1px;
+  background: #1a1c28;
+  width: 100%;
+}
+
+.match-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid #181924;
+}
+
+.btn-open-series {
+  background: transparent;
+  border: none;
+  color: #06b6d4;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-open-series:hover {
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.btn-admin-action {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #f87171;
+  font-size: 0.7rem;
+  font-weight: 800;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.btn-admin-action:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.empty-matches-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* Colores de Utilidad */
+.text-gold {
+  color: #fde047;
+}
+.text-cyan {
+  color: #06b6d4;
+}
+.text-green {
+  color: #10b981;
+}
+.text-red {
+  color: #ef4444;
+}
+.text-muted {
+  color: #4b5563;
+}
+/* Feedback táctil y visual al pasar el cursor */
+.league-series-row.card-interactive,
+.bracket-series-card {
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.league-series-row.card-interactive:hover,
+.bracket-series-card:hover {
+  border-color: #06b6d4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.2);
+}
+
+.btn-open-series {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  color: #06b6d4;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-open-series:hover {
+  background: #06b6d4;
+  color: #000000;
+}

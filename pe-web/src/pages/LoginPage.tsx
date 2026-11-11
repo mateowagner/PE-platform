@@ -20,10 +20,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // ➔ Único punto de contacto con la red
       const data = await loginAccount(form);
 
-      login(data.user, data.accessToken);
+      const resolvedToken = data.accessToken || data.token;
+      login(data.user, resolvedToken);
       navigate("/dashboard");
     } catch (err) {
       if (axios.isAxiosError(err)) {

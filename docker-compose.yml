@@ -1,33 +1,46 @@
+# docker-compose.yml
+version: "3.8"
+
 services:
   api:
     build:
       context: ./pe-api
       dockerfile: Dockerfile
+      target: development # 👈 Usa la etapa de desarrollo con hot-reload
     container_name: pe_api
     ports:
       - "3000:3000"
     env_file:
       - ./pe-api/.env
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432 # 👈 En la red interna de Docker se conecta a 5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./pe-api:/app
-      - /app/node_modules
+      - /app/node_modules # Protege node_modules del contenedor contra sobreescrituras del host
     depends_on:
       - db
       - redis
     restart: unless-stopped
+    networks:
+      - pe_network
 
   db:
     image: postgres:16-alpine
     container_name: pe_db
     ports:
-      - "5433:5432"
+      - "5433:5432" # 👈 Expone 5433 hacia tu PC para herramientas visuales (DBeaver, TablePlus)
     environment:
-      POSTGRES_USER: lpe_user
-      POSTGRES_PASSWORD: lpe_pass
-      POSTGRES_DB: lpe_db
+      POSTGRES_USER: ${DATABASE_USER:-lpe_user}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-lpe_pass}
+      POSTGRES_DB: ${DATABASE_NAME:-lpe_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - pe_network
 
   redis:
     image: redis:7-alpine
@@ -35,14 +48,23 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
+    networks:
+      - pe_network
 
   mailhog:
     image: mailhog/mailhog
     container_name: pe_mailhog
     ports:
       - "1025:1025" # SMTP
-      - "8025:8025" # UI web
+      - "8025:8025" # UI Web
     restart: unless-stopped
+    networks:
+      - pe_network
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  pe_network:
+    driver: bridge

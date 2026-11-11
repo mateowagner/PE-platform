@@ -1,8 +1,10 @@
+// pe-web/src/components/PlayerSlot.tsx
 import { useState } from "react";
 import { useTeams } from "../hooks/useTeams";
 import axios from "axios";
 import type { Member } from "../types";
 import { UserX } from "lucide-react";
+import "./PlayerSlot.css";
 
 const RANK_EMBLEMS: Record<string, string> = {
   UNRANKED:
@@ -49,7 +51,7 @@ export default function PlayerSlot({
   isCurrentUserCaptain,
   onMemberRemoved,
 }: {
-  member?: Member;
+  member: Member;
   index: number;
   isOwner: boolean;
   teamId: string;
@@ -58,17 +60,7 @@ export default function PlayerSlot({
 }) {
   const { kickMember } = useTeams();
   const [kicking, setKicking] = useState(false);
-  const [showModal, setShowModal] = useState(false); // Estado para el modal personalizado
-
-  if (!member) {
-    return (
-      <div className="player-slot empty">
-        <span className="slot-number">{index + 1}</span>
-        <div className="player-avatar empty-avatar" />
-        <span className="empty-slot-text">Lugar disponible</span>
-      </div>
-    );
-  }
+  const [showModal, setShowModal] = useState(false);
 
   const handleKick = async () => {
     if (!member) return;
@@ -76,7 +68,6 @@ export default function PlayerSlot({
 
     try {
       const updatedTeam = await kickMember(teamId, member.id);
-
       onMemberRemoved(updatedTeam);
       setShowModal(false);
     } catch (err) {
@@ -90,143 +81,90 @@ export default function PlayerSlot({
     }
   };
 
+  const tierKey = member.soloTier?.toUpperCase() || "UNRANKED";
+
   return (
-    <div className="player-slot filled" style={{ position: "relative" }}>
-      <span className="slot-number">{index + 1}</span>
-      <div className="player-avatar">
-        {member.username.charAt(0).toUpperCase()}
-      </div>
-      <div className="player-info">
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span className="player-username">{member.username}</span>
-          {isOwner && <span className="player-owner-badge">Capitán</span>}
+    <div className="player-slot-row">
+      <div className="slot-left-meta">
+        <span className="slot-order-number">{index + 1}</span>
+        <div className="player-avatar-circle">
+          {member.username.charAt(0).toUpperCase()}
         </div>
-        {member.riotGameName ? (
-          <span className="player-riot-id">
-            {member.riotGameName}#{member.riotTagLine}
+        <div className="player-name-wrapper">
+          <div className="player-header-line">
+            <span className="player-username-text">{member.username}</span>
+            {isOwner && <span className="captain-tag">Capitán</span>}
+          </div>
+          <span className="player-riot-tagline">
+            {member.riotGameName
+              ? `${member.riotGameName}#${member.riotTagLine}`
+              : "Sin cuenta Riot vinculada"}
           </span>
-        ) : (
-          <span className="player-riot-id">Sin cuenta Riot vinculada</span>
-        )}
+        </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-        <div className="player-rank">
+      <div className="slot-right-actions">
+        <div className="player-tier-capsule">
           {member.soloTier ? (
             <>
               <img
-                src={RANK_EMBLEMS[member.soloTier]}
-                alt={member.soloTier}
+                src={RANK_EMBLEMS[tierKey] || RANK_EMBLEMS.UNRANKED}
+                alt={tierKey}
                 className="slot-rank-emblem"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
-              <span className="slot-rank-text">
-                {TIER_ABBREV[member.soloTier]} {member.soloRank}
+              <span className="slot-rank-name">
+                {TIER_ABBREV[tierKey] || "UR"} {member.soloRank || ""}
               </span>
             </>
           ) : (
-            <span className="slot-rank-text">—</span>
+            <span className="slot-rank-name">—</span>
           )}
         </div>
 
         {isCurrentUserCaptain && !isOwner && (
           <button
+            type="button"
+            className="btn-kick-member"
             onClick={() => setShowModal(true)}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--text-muted, #6c757d)",
-              cursor: "pointer",
-              padding: "8px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "color 0.2s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.color = "var(--danger, #ff4d4d)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.color = "var(--text-muted, #6c757d)")
-            }
             title="Expulsar jugador"
           >
-            <UserX size={18} />
+            <UserX size={17} />
           </button>
         )}
       </div>
 
-      {/* --- MODAL PERSONALIZADO DE CONFIRMACIÓN --- */}
+      {/* Modal de Confirmación de Expulsión */}
       {showModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
+        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
           <div
-            style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-subtle)",
-              padding: "2rem",
-              borderRadius: "8px",
-              maxWidth: "400px",
-              width: "90%",
-              textAlign: "center",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-            }}
+            className="modal-container modal-compact"
+            onClick={(e) => e.stopPropagation()}
           >
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                color: "var(--text-primary)",
-                marginBottom: "1rem",
-                fontSize: "1.25rem",
-              }}
-            >
-              ¿EXPULSAR JUGADOR?
+            <h3 className="modal-title" style={{ color: "#ef4444" }}>
+              ¿Expulsar Jugador?
             </h3>
-            <p
-              style={{
-                color: "var(--text-secondary)",
-                fontSize: "0.95rem",
-                marginBottom: "2rem",
-                lineHeight: "1.5",
-              }}
-            >
-              Estás seguro de que querés expulsar a{" "}
-              <strong style={{ color: "var(--text-primary)" }}>
-                {member.username}
-              </strong>{" "}
-              del equipo?
+            <p className="modal-subtitle" style={{ marginTop: "0.5rem" }}>
+              ¿Estás seguro de que deseas retirar a{" "}
+              <strong style={{ color: "#ffffff" }}>{member.username}</strong> de
+              la escuadra oficial?
             </p>
-            <div
-              style={{ display: "flex", gap: "1rem", justifyContent: "center" }}
-            >
+            <div className="modal-footer" style={{ marginTop: "1.5rem" }}>
               <button
+                type="button"
                 className="btn btn-outline"
                 onClick={() => setShowModal(false)}
                 disabled={kicking}
-                style={{ minWidth: "100px" }}
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 className="btn btn-danger"
                 onClick={handleKick}
                 disabled={kicking}
-                style={{ minWidth: "100px" }}
               >
                 {kicking ? "Expulsando..." : "Expulsar"}
               </button>

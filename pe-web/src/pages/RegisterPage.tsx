@@ -134,22 +134,18 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
-          <div className="input-group">
-            <label className="input-label">Confirmar contraseña</label>
-            <input
-              className="input"
-              type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
-              value={form.confirm}
-              onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-              required
-            />
-          </div>
           {error && <div className="auth-error">{error}</div>}
           <button
             type="submit"
             className="btn btn-primary btn-full"
-            style={{ marginTop: "0.5rem", padding: "0.8rem" }}
+            style={{
+              marginTop: "0.5rem",
+              padding: "0.8rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+            }}
             disabled={loading}
           >
             {loading ? "Creando cuenta..." : "Crear cuenta"}

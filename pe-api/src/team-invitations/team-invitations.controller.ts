@@ -1,3 +1,4 @@
+// pe-api/src/team-invitations/team-invitations.controller.ts
 import {
   Controller,
   Post,
@@ -9,16 +10,16 @@ import {
   Body,
 } from '@nestjs/common';
 import { TeamInvitationsService } from './team-invitations.service';
-import { JwtAuthGuard } from '../auth/Guards'; // Ajustá el path según tu proyecto
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Ajustado al estándar del proyecto
 import { Request } from 'express';
 import { CreateTeamInvitationDto } from './dto/create-team-invitation.dto';
+import { SendInvitationByIdentifierDto } from './dto/send-invitation-identifier.dto';
+import { GetUser } from '../common/decorators/get-user.decorator';
 
-// Asumiendo que tenés una interfaz definida para tu request autenticado
 interface AuthenticatedRequest extends Request {
   user: {
     id: string;
     role: string;
-    // ... otros campos del JWT payload
   };
 }
 
@@ -28,22 +29,23 @@ export class TeamInvitationsController {
     private readonly teamInvitationsService: TeamInvitationsService,
   ) {}
 
-  @Post(':id/accept')
+  // 1. Enviar invitación por identificador amigable (Username o Riot ID #Tag)
+  @Post('team/:teamId/send')
   @UseGuards(JwtAuthGuard)
-  async acceptInvitation(
-    @Param('id', ParseUUIDPipe) invitationId: string,
-    @Req() req: AuthenticatedRequest,
+  async sendByIdentifier(
+    @Param('teamId', ParseUUIDPipe) teamId: string,
+    @GetUser('id') inviterId: string,
+    @Body() dto: SendInvitationByIdentifierDto,
   ) {
-    await this.teamInvitationsService.acceptInvitation(
-      req.user.id,
-      invitationId,
+    return await this.teamInvitationsService.sendInvitationByIdentifier(
+      teamId,
+      inviterId,
+      dto.identifier,
     );
-
-    return {
-      message: 'Invitación aceptada. Te has unido al equipo exitosamente.',
-    };
   }
-  @Post(':teamId')
+
+  // 2. Enviar invitación tradicional por UUID de usuario
+  @Post('team/:teamId/by-userid')
   @UseGuards(JwtAuthGuard)
   async sendInvitation(
     @Param('teamId', ParseUUIDPipe) teamId: string,
@@ -66,6 +68,24 @@ export class TeamInvitationsController {
     };
   }
 
+  // 3. Aceptar invitación pendiente
+  @Post(':id/accept')
+  @UseGuards(JwtAuthGuard)
+  async acceptInvitation(
+    @Param('id', ParseUUIDPipe) invitationId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    await this.teamInvitationsService.acceptInvitation(
+      req.user.id,
+      invitationId,
+    );
+
+    return {
+      message: 'Invitación aceptada. Te has unido al equipo exitosamente.',
+    };
+  }
+
+  // 4. Rechazar invitación pendiente
   @Post(':id/reject')
   @UseGuards(JwtAuthGuard)
   async rejectInvitation(
@@ -81,18 +101,11 @@ export class TeamInvitationsController {
       message: 'Has rechazado la invitación exitosamente.',
     };
   }
+
+  // 5. Consultar invitaciones pendientes del usuario logueado
   @Get('pending-invitations')
   @UseGuards(JwtAuthGuard)
-  async getMyInvitations(@Req() req: AuthenticatedRequest) {
-    const invitations =
-      await this.teamInvitationsService.getInvitationsByUserId(req.user.id);
-    return { invitations };
+  async getMyInvitations(@GetUser('id') userId: string) {
+    return await this.teamInvitationsService.getInvitationsByUserId(userId);
   }
-  /*@Get(':id')
-  @UseGuards(JwtAuthGuard)
-  async getInvitation(@Param('id', ParseUUIDPipe) invitationId: string) {
-    const invitation =
-      await this.teamInvitationsService.getInvitationById(invitationId);
-    return { invitation };
-  }*/
 }

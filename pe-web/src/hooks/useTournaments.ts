@@ -1,15 +1,17 @@
+// pe-web/src/hooks/useTournaments.ts
 import { apiClient } from "../config/apiClient";
 import type {
   Tournament,
   TournamentDetails,
   TournamentSeries,
   UpdateTournamentInput,
+  CreateTournamentInput,
+  Match,
 } from "../types";
 
 export function useTournaments() {
-  // --- METODOS BASE (CRUD) ---
   const createTournament = async (
-    data: Partial<Tournament>,
+    data: CreateTournamentInput,
   ): Promise<Tournament> => {
     const res = await apiClient.post<Tournament>("/tournaments", data);
     return res.data;
@@ -19,7 +21,6 @@ export function useTournaments() {
     await apiClient.delete(`/tournaments/${id}`);
   };
 
-  // --- METODOS DE DETALLE E INSCRIPCIÓN ---
   const getTournamentDetails = async (
     id: string,
   ): Promise<TournamentDetails> => {
@@ -54,10 +55,11 @@ export function useTournaments() {
     tournamentId: string,
   ): Promise<TournamentDetails> => {
     const res = await apiClient.post<TournamentDetails>(
-      `/tournaments/${tournamentId}/generate-fixture`,
+      `/tournaments/${tournamentId}/start`,
     );
     return res.data;
   };
+
   const getTournaments = async (): Promise<Tournament[]> => {
     const res = await apiClient.get<Tournament[]>("/tournaments");
     return res.data;
@@ -74,6 +76,30 @@ export function useTournaments() {
     return res.data;
   };
 
+  // Endpoint de reprogramación de series
+  const rescheduleSeries = async (
+    seriesId: string,
+    scheduledDateIso: string,
+  ): Promise<TournamentSeries> => {
+    const res = await apiClient.patch<TournamentSeries>(
+      `/series/${seriesId}/reschedule`,
+      { scheduled_date: scheduledDateIso },
+    );
+    return res.data;
+  };
+
+  // Endpoint de partidos del equipo
+  const getTeamMatches = async (
+    teamId: string,
+    status?: "pending" | "finished",
+  ): Promise<Match[]> => {
+    const url = status
+      ? `/matches/team/${teamId}?status=${status}`
+      : `/matches/team/${teamId}`;
+    const res = await apiClient.get<Match[]>(url);
+    return res.data;
+  };
+
   return {
     createTournament,
     updateTournament,
@@ -84,5 +110,7 @@ export function useTournaments() {
     cancelInscription,
     startTournament,
     getTournaments,
+    rescheduleSeries,
+    getTeamMatches,
   };
 }

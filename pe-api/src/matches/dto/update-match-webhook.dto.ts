@@ -1,41 +1,63 @@
+// pe-api/src/matches/dto/update-match-webhook.dto.ts
 import {
-  IsString,
-  IsNumber,
-  IsUUID,
   IsArray,
-  ValidateNested,
   IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-// Sub-DTO para validar a los jugadores que vienen en el array
-class RiotPlayerDto {
+export class WinningTeamPlayerDto {
   @IsString()
   @IsNotEmpty()
   summonerName!: string;
 
-  // Podés sumar championId, kills, deaths, etc., si los necesitás a futuro.
+  @IsString()
+  @IsOptional()
+  puuid?: string;
 }
 
 export class WebhookRiotDto {
   @IsNumber()
   @IsNotEmpty()
-  startTime!: number; // Timestamp en milisegundos de Riot
+  startTime!: number;
 
   @IsString()
   @IsNotEmpty()
-  shortCode!: string; // El tournament_code (ej. LAS-123456789)
+  shortCode!: string;
 
-  @IsUUID('4') // ➔ CRÍTICO: Obligamos a que sea un UUID v4 (nuestro match.id)
+  @IsString()
   @IsNotEmpty()
-  metaData!: string;
+  metaData!: string; // UUID del Match
 
   @IsNumber()
   @IsNotEmpty()
-  gameId!: number; // El riot_match_id interno
+  gameId!: number;
+
+  @IsString()
+  @IsOptional()
+  gameName?: string;
+
+  @IsString()
+  @IsOptional()
+  gameType?: string;
+
+  @IsNumber()
+  @IsOptional()
+  gameMap?: number;
+
+  @IsString()
+  @IsOptional()
+  gameMode?: string;
+
+  @IsString()
+  @IsOptional()
+  region?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => RiotPlayerDto)
-  winningTeam!: RiotPlayerDto[]; // Array con los ganadores
+  @Type(() => WinningTeamPlayerDto)
+  winningTeam!: WinningTeamPlayerDto[];
 }

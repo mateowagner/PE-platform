@@ -1,6 +1,13 @@
+// pe-web/src/types/index.ts
+
 export type TournamentStatus = "PREPARING" | "STARTED" | "FINISHED";
 export type TournamentType = "LEAGUE" | "CUP" | "GROUPS";
 export type SkillTier =
+  | "OPEN"
+  | "HIGH_TIER"
+  | "MID_HIGH"
+  | "MID"
+  | "LOW"
   | "IRON"
   | "BRONZE"
   | "SILVER"
@@ -11,6 +18,9 @@ export type SkillTier =
   | "MASTER"
   | "GRANDMASTER"
   | "CHALLENGER";
+
+export type SeriesFormat = "BO1" | "BO3" | "BO5";
+export type ScheduleType = "SAME_DAY" | "WEEKEND" | "CUSTOM";
 
 export interface Member {
   id: string;
@@ -29,10 +39,12 @@ export interface Team {
   owner: { id: string; username: string };
   members: Member[];
 }
+
 export interface TournamentParticipant extends Team {
   memberCount?: number;
   avgTier?: string;
 }
+
 export interface Tournament {
   id: string;
   name: string;
@@ -40,6 +52,11 @@ export interface Tournament {
   type: TournamentType;
   status: TournamentStatus;
   skill_tier: string;
+  default_series_format?: SeriesFormat;
+  final_series_format?: SeriesFormat;
+  schedule_type?: ScheduleType;
+  days_between_rounds?: number;
+  hours_between_rounds?: number;
   registration_start_date: string;
   registration_end_date: string;
   start_date: string;
@@ -51,6 +68,7 @@ export interface Tournament {
   teams: Team[];
   created_at: string;
 }
+
 export interface TournamentDetails extends Tournament {
   currentTeamsCount: number;
   teams: TournamentParticipant[];
@@ -59,26 +77,62 @@ export interface TournamentDetails extends Tournament {
 export type UpdateTournamentInput = Partial<
   Omit<Tournament, "id" | "created_at" | "teams">
 >;
+
+export interface CreateTournamentInput {
+  name: string;
+  type: TournamentType;
+  skill_tier: string;
+  default_series_format?: SeriesFormat;
+  final_series_format?: SeriesFormat;
+  schedule_type?: ScheduleType;
+  days_between_rounds?: number;
+  hours_between_rounds?: number;
+  max_teams: number;
+  entry_fee: number;
+  registration_start_date: string;
+  registration_end_date: string;
+  start_date: string;
+}
+
+// ─── SERIES Y PARTIDOS CON FECHAS Y FORMATOS DINÁMICOS ────────────────────────
+export interface Match {
+  id: string;
+  match_order: number;
+  status: "CREATED" | "IN_PROGRESS" | "FINISHED";
+  tournament_code?: string;
+  riot_match_id?: string;
+  winner?: { id: string; name: string; logoUrl?: string | null } | null;
+  series?: TournamentSeries;
+}
+
 export interface TournamentSeries {
   id: string;
   stage_name: string;
   round_order: number;
-  status: string;
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   team_a_wins: number;
   team_b_wins: number;
   wins_required: number;
+  scheduled_date?: string | null;
+  tournament?: {
+    id: string;
+    name: string;
+  } | null;
+  next_series_slot?: "TEAM_A" | "TEAM_B" | null;
+  next_series?: TournamentSeries | null;
   parent_series_id?: string | null;
-  team_a?: { id: string; name: string } | null;
-  team_b?: { id: string; name: string } | null;
-  winner?: { id: string; name: string } | null;
+  team_a?: { id: string; name: string; logoUrl?: string | null } | null;
+  team_b?: { id: string; name: string; logoUrl?: string | null } | null;
+  winner?: { id: string; name: string; logoUrl?: string | null } | null;
+  matches?: Match[];
 }
+
 export interface Invitation {
   id: string;
   teamId: string;
   userId: string;
   status: "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string;
-  // ➔ Crucial para la UI: El backend debería incluir los datos básicos del equipo que invita
   team: {
     id: string;
     name: string;

@@ -1,0 +1,206 @@
+/* pe-web/src/components/MatchScoreboard.css */
+
+.scoreboard-container {
+  background: #090a0f;
+  border: 1px solid #1a1c28;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.scoreboard-top-banner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  border-bottom: 1px solid #1a1c28;
+  padding-bottom: 1rem;
+}
+
+.team-banner-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.team-banner-header:last-child {
+  justify-content: flex-end;
+}
+
+.team-banner-header h3 {
+  margin: 0;
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.2rem;
+  color: #ffffff;
+}
+
+.crown-tag {
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid #eab308;
+  color: #fde047;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.game-duration-badge {
+  background: #12141e;
+  border: 1px solid #202436;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.scoreboard-horizontal-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.scoreboard-side-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Fila de jugador con layout Grid rígido por columnas */
+.player-row {
+  display: grid;
+  grid-template-columns: 36px 145px 95px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  background: #0e1017;
+  border: 1px solid #1a1d2b;
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  height: 48px; /* Altura idéntica fija para todas las filas */
+  box-sizing: border-box;
+}
+
+.side-winner .player-row {
+  border-left: 3px solid #10b981;
+}
+
+.side-loser .player-row {
+  border-left: 3px solid #ef4444;
+}
+
+/* Ícono de campeón */
+.champ-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Bloque Invocador + KDA (con ancho fijo para no deformar) */
+.player-meta-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.player-summoner {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kda-text {
+  font-size: 0.7rem;
+  color: #9ca3af;
+}
+
+.kda-text em {
+  color: #06b6d4;
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* Bloque Daño y Oro fijo */
+.player-stats-compact {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 0.68rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+/* Grilla rígida de ítems fijada al extremo derecho */
+.items-fixed-grid {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.item-cell-box {
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #1e2233;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.item-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cell-trinket {
+  margin-left: 5px;
+  border-radius: 50%;
+  border-color: rgba(6, 182, 212, 0.4);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.img-trinket {
+  border-radius: 50%;
+}
+
+/* Slot 8: Misión / Rol */
+.cell-mission {
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.cell-mission:has(img) {
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  background: rgba(147, 51, 234, 0.08);
+}
+
+.img-mission {
+  border-radius: 3px;
+  filter: drop-shadow(0 0 3px rgba(192, 132, 252, 0.3));
+}

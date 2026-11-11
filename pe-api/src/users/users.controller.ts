@@ -6,14 +6,27 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { RankSyncService } from './rank-sync.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly rankSyncService: RankSyncService,
+  ) {}
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me/sync-rank')
+  async syncMyRank(@Req() req: { user: { id: string } }) {
+    return this.rankSyncService.syncUserRank(req.user.id);
+  }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
