@@ -1,20 +1,30 @@
+// pe-api/src/main.ts
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
+import * as fs from 'fs';
+import * as path from 'path';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Asegurar la existencia física de la carpeta de subidas de logos
+  const uploadDir = path.join(process.cwd(), 'uploads', 'teams');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
 
+  const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
   // Prefijo global para todos los endpoints
   app.setGlobalPrefix('api/v1');
 
   // Validación automática de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // ignora campos no declarados en el DTO
+      whitelist: true, // Ignora campos no declarados en el DTO
       forbidNonWhitelisted: true,
-      transform: true, // convierte tipos automáticamente
+      transform: true, // Convierte tipos automáticamente
     }),
   );
 
@@ -30,13 +40,14 @@ async function bootstrap() {
 
   // CORS para el frontend
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-  await app.listen(process.env.PORT || 3000);
-  console.log(`🚀 API corriendo en http://localhost:3000/api/v1`);
-  console.log(`📚 Swagger en http://localhost:3000/api/docs`);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`🚀 API corriendo en http://localhost:${port}/api/v1`);
+  console.log(`📚 Swagger en http://localhost:${port}/api/docs`);
 }
 void bootstrap();
