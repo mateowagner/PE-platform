@@ -57,10 +57,10 @@ export class TeamsService {
           'Necesitas vincular tu cuenta de Riot antes de crear un equipo.',
         );
       }
-
+      const logo = 'logo_url' in dto ? dto.logo_url : undefined;
       const team = queryRunner.manager.create(Team, {
         name: dto.name,
-        logoUrl: dto.logo_url,
+        logoUrl: logo,
         owner: user,
       });
       const savedTeam = await queryRunner.manager.save(Team, team);
@@ -106,7 +106,14 @@ export class TeamsService {
   async update(id: string, dto: UpdateTeamDto): Promise<Team> {
     const team = await this.teamsRepository.findOne({ where: { id } });
     if (!team) throw new NotFoundException(`Team con id ${id} no encontrado.`);
-    Object.assign(team, dto);
+
+    if (dto.name) {
+      team.name = dto.name;
+    }
+    if (dto.logo_url !== undefined) {
+      team.logoUrl = dto.logo_url;
+    }
+
     return this.teamsRepository.save(team);
   }
 
@@ -215,40 +222,48 @@ export class TeamsService {
     await queryRunner.startTransaction();
 
     try {
-      // 1. Bloqueo puro sobre el usuario
-      const user = await queryRunner.manager
-        .createQueryBuilder(User, 'user')
-        .setLock('pessimistic_write')
-        .where('user.id = :userId', { userId })
-        .getOne();
-
-      if (!user) throw new NotFoundException('El usuario no existe.');
-
-      const userWithTeam = await queryRunner.manager.findOne(User, {
-        where: { id: userId },
-        relations: ['team'],
-      });
-
-      if (!userWithTeam?.team) {
-        throw new BadRequestException(
-          'No perteneces a ningún equipo actualmente.',
-        );
-      }
-
-      const teamId = userWithTeam.team.id;
-      await this.assertTeamNotInActiveTournament(teamId);
-
+      // 1. Cargar el equipo con su dueño y miembros
       const team = await queryRunner.manager.findOne(Team, {
-        where: { id: teamId },
-        relations: ['owner'],
+        where: { members: { id: userId } },
+        relations: ['owner', 'members'],
       });
 
-      if (team && team.owner.id === userId) {
-        throw new BadRequestException(
-          'Como capitán, no puedes abandonar el equipo directamente. Debes transferir el liderazgo o disolver el equipo.',
-        );
+      if (!team) {
+        throw new NotFoundException('No perteneces a ningún equipo.');
       }
 
+      // 2. Obtener la entidad del usuario que sale para desvincularlo formalmente
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new NotFoundException('Usuario no encontrado.');
+      }
+
+      const isOwner = team.owner?.id === userId;
+
+      // 3. Caso: Es el Capitán / Dueño
+      if (isOwner) {
+        // Si hay otros miembros, se transfiere la capitanía al siguiente integrante
+        const remainingMembers = team.members.filter((m) => m.id !== userId);
+
+        if (remainingMembers.length > 0) {
+          team.owner = remainingMembers[0];
+          team.members = remainingMembers;
+          await queryRunner.manager.save(Team, team);
+        } else {
+          // Si era el único integrante, se debe validar que no esté en un torneo en curso
+          // antes de disolver el equipo
+          await queryRunner.manager.remove(Team, team);
+        }
+      } else {
+        // 4. Caso: Es un miembro regular
+        team.members = team.members.filter((m) => m.id !== userId);
+        await queryRunner.manager.save(Team, team);
+      }
+
+      // 5. Desvincular explícitamente al usuario para limpiar su foreign key (team_id = null)
       user.team = null as unknown as Team;
       await queryRunner.manager.save(User, user);
 
