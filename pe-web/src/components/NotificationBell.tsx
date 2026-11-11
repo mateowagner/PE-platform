@@ -1,16 +1,16 @@
+// pe-web/src/components/NotificationBell.tsx
 import { useState, useEffect, useRef } from "react";
 import { Bell, Check, X } from "lucide-react";
-import { useInvitations } from "../hooks/useInvitations"; // ➔ Importación corregida
+import { useInvitations } from "../hooks/useInvitations";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // ➔ Necesario para el tipado de errores
+import { getTeamLogo, handleImageError } from "../utils/image";
+import axios from "axios";
 import type { Invitation } from "../types";
 
 export default function NotificationBell() {
   const { updateUser } = useAuthStore();
   const navigate = useNavigate();
-
-  // ➔ Extraemos las herramientas de red de su propio dominio
   const { getPendingInvitations, respondToInvitation } = useInvitations();
 
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -19,19 +19,17 @@ export default function NotificationBell() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 1. Cargar invitaciones pendientes
   const fetchInvitations = async () => {
     try {
       const data = await getPendingInvitations();
       setInvitations(data || []);
     } catch (error) {
-      console.error("Error cargando notificaciones", error);
+      console.error("Error cargando notificaciones:", error);
     }
   };
 
   useEffect(() => {
     void fetchInvitations();
-
     const interval = setInterval(() => void fetchInvitations(), 30000);
     return () => clearInterval(interval);
   }, []);
@@ -49,15 +47,13 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 2. Manejar las acciones de los botones (Aceptar / Rechazar)
-  const handleAction = async (id: string, action: "ACCEPT" | "REJECT") => {
+  const handleAction = async (id: string, action: "accept" | "reject") => {
     setLoadingAction(id);
 
     try {
-      // Ejecución aislada de red
       await respondToInvitation(id, action);
 
-      if (action === "ACCEPT") {
+      if (action === "accept") {
         const acceptedInv = invitations.find((inv) => inv.id === id);
         if (acceptedInv) {
           updateUser({ teamId: acceptedInv.team.id });
@@ -68,13 +64,10 @@ export default function NotificationBell() {
 
       await fetchInvitations();
     } catch (error) {
-      // ➔ MANEJO DE ESTADOS HTTP CON AXIOS
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
-          // La magia del 404 ocurre ahora dentro de las excepciones
           setInvitations((prev) => prev.filter((inv) => inv.id !== id));
         } else {
-          // Errores como 409 (Ya perteneces a un equipo)
           alert(
             error.response?.data?.message ||
               "Hubo un problema al procesar la solicitud.",
@@ -95,11 +88,12 @@ export default function NotificationBell() {
     >
       {/* Botón de la Campana */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         style={{
           background: "none",
           border: "none",
-          color: "var(--text-secondary)",
+          color: "var(--text-secondary, #9ca3af)",
           cursor: "pointer",
           position: "relative",
           padding: "8px",
@@ -109,22 +103,21 @@ export default function NotificationBell() {
           transition: "color 0.2s",
         }}
         onMouseEnter={(e) =>
-          (e.currentTarget.style.color = "var(--text-primary)")
+          (e.currentTarget.style.color = "var(--text-primary, #ffffff)")
         }
         onMouseLeave={(e) =>
-          (e.currentTarget.style.color = "var(--text-secondary)")
+          (e.currentTarget.style.color = "var(--text-secondary, #9ca3af)")
         }
       >
         <Bell size={22} />
 
-        {/* Badge llamativo con el número (Naranja/Rojo) */}
         {invitations.length > 0 && (
           <span
             style={{
               position: "absolute",
               top: "2px",
               right: "2px",
-              background: "var(--orange-bright, #ff6b00)", // Tu color naranja corporativo
+              background: "#ff6b00",
               color: "white",
               fontSize: "10px",
               fontWeight: "bold",
@@ -135,7 +128,7 @@ export default function NotificationBell() {
               alignItems: "center",
               justifyContent: "center",
               padding: "0 4px",
-              boxShadow: "0 0 0 2px var(--bg-body, #0a0a0c)",
+              boxShadow: "0 0 0 2px #0a0a0c",
             }}
           >
             {invitations.length}
@@ -143,7 +136,7 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Menú Desplegable (Dropdown) */}
+      {/* Menú Desplegable */}
       {isOpen && (
         <div
           style={{
@@ -152,10 +145,10 @@ export default function NotificationBell() {
             right: 0,
             marginTop: "8px",
             width: "320px",
-            background: "var(--bg-card)",
-            border: "1px solid var(--border-subtle)",
+            background: "#111218",
+            border: "1px solid #282a3d",
             borderRadius: "8px",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.7)",
             zIndex: 100,
             overflow: "hidden",
           }}
@@ -163,15 +156,16 @@ export default function NotificationBell() {
           <div
             style={{
               padding: "1rem",
-              borderBottom: "1px solid var(--border-subtle)",
+              borderBottom: "1px solid #1e2233",
             }}
           >
             <h4
               style={{
                 margin: 0,
                 fontSize: "0.9rem",
-                color: "var(--text-primary)",
+                color: "#ffffff",
                 fontWeight: "bold",
+                letterSpacing: "0.5px",
               }}
             >
               INVITACIONES RECIBIDAS
@@ -185,7 +179,7 @@ export default function NotificationBell() {
                   margin: 0,
                   padding: "1.5rem",
                   textAlign: "center",
-                  color: "var(--text-muted)",
+                  color: "#6b7280",
                   fontSize: "0.9rem",
                 }}
               >
@@ -199,8 +193,8 @@ export default function NotificationBell() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "1rem",
-                    borderBottom: "1px solid var(--border-subtle)",
+                    padding: "0.85rem 1rem",
+                    borderBottom: "1px solid #1a1c28",
                     background: "rgba(255,255,255,0.01)",
                   }}
                 >
@@ -209,25 +203,31 @@ export default function NotificationBell() {
                       display: "flex",
                       alignItems: "center",
                       gap: "0.75rem",
+                      overflow: "hidden",
                     }}
                   >
                     <img
-                      src={inv.team.logoUrl || "/logo.jpeg"}
+                      src={getTeamLogo(inv.team)}
                       alt={inv.team.name}
                       style={{
                         width: "32px",
                         height: "32px",
                         borderRadius: "4px",
                         objectFit: "cover",
+                        flexShrink: 0,
                       }}
+                      onError={(e) => handleImageError(e, "/logo.jpeg")}
                     />
-                    <div>
+                    <div style={{ overflow: "hidden" }}>
                       <p
                         style={{
                           margin: 0,
-                          fontSize: "0.9rem",
-                          color: "var(--text-primary)",
+                          fontSize: "0.85rem",
+                          color: "#ffffff",
                           fontWeight: "600",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
                         {inv.team.name}
@@ -235,8 +235,8 @@ export default function NotificationBell() {
                       <p
                         style={{
                           margin: 0,
-                          fontSize: "0.75rem",
-                          color: "var(--text-muted)",
+                          fontSize: "0.7rem",
+                          color: "#9ca3af",
                         }}
                       >
                         Te invitó a unirte
@@ -245,10 +245,13 @@ export default function NotificationBell() {
                   </div>
 
                   {/* Botones de Acción */}
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <div
+                    style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}
+                  >
                     <button
+                      type="button"
                       disabled={loadingAction !== null}
-                      onClick={() => void handleAction(inv.id, "ACCEPT")}
+                      onClick={() => void handleAction(inv.id, "accept")}
                       style={{
                         background: "rgba(76, 175, 80, 0.15)",
                         border: "1px solid #4caf50",
@@ -259,12 +262,14 @@ export default function NotificationBell() {
                         display: "flex",
                         alignItems: "center",
                       }}
+                      title="Aceptar invitación"
                     >
                       <Check size={14} />
                     </button>
                     <button
+                      type="button"
                       disabled={loadingAction !== null}
-                      onClick={() => void handleAction(inv.id, "REJECT")}
+                      onClick={() => void handleAction(inv.id, "reject")}
                       style={{
                         background: "rgba(244, 67, 54, 0.15)",
                         border: "1px solid #f44336",
@@ -275,6 +280,7 @@ export default function NotificationBell() {
                         display: "flex",
                         alignItems: "center",
                       }}
+                      title="Rechazar invitación"
                     >
                       <X size={14} />
                     </button>

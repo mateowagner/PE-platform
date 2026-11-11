@@ -1,0 +1,300 @@
+/* pe-web/src/pages/SeriesDetailPage.css */
+
+.series-page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* ─── BANNER GLOBAL ───────────────────────────────────────────────────────── */
+.series-master-header {
+  background: #0d0e14;
+  border: 1px solid #1e2233;
+  border-radius: 12px;
+  padding: 1.75rem 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+}
+
+.series-team-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 200px;
+}
+
+.series-header-shield {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.4));
+}
+
+.series-header-team-name {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-align: center;
+}
+
+.series-score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.series-format-pill {
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #06b6d4;
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+}
+
+.series-digits-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--font-display, sans-serif);
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+.score-high {
+  color: #10b981;
+}
+
+.score-divider {
+  color: #2b3044;
+}
+
+.series-stage-title {
+  font-size: 0.85rem;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 800;
+}
+
+.series-scheduled-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+/* ─── STACK DE MATCHES ACORDEÓN ──────────────────────────────────────────── */
+.series-matches-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f3f4f6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 0.5rem 0;
+}
+
+.match-accordion-card {
+  background: #0f111a;
+  border: 1px solid #1c2030;
+  border-radius: 10px;
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.card-finished {
+  border-left: 4px solid #10b981;
+}
+
+.card-pending {
+  border-left: 4px solid #f59e0b;
+  opacity: 0.9;
+}
+
+.card-expanded {
+  border-color: #06b6d4;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.15);
+}
+
+/* Encabezado Compacto de cada Partido */
+.match-accordion-header {
+  display: grid;
+  grid-template-columns: 180px 1fr 200px;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: #11131e;
+  gap: 1rem;
+}
+
+.match-accordion-header:hover {
+  background: #151826;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Izquierda: Meta */
+.match-left-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.match-order-badge {
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.match-date-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+/* Centro: Tira VS */
+.match-teams-versus-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.versus-team-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 140px;
+}
+
+.versus-team-cell:first-child {
+  justify-content: flex-end;
+}
+
+.versus-team-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.versus-team-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.team-winner .versus-team-name {
+  color: #10b981;
+  font-weight: 900;
+}
+
+.winner-crown-icon {
+  color: #eab308;
+  filter: drop-shadow(0 0 6px rgba(234, 179, 8, 0.5));
+}
+
+.versus-divider {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #6b7280;
+  background: #090a0f;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #1a1c28;
+}
+
+/* Derecha: Acciones */
+.match-right-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.85rem;
+}
+
+.match-status-pill {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-transform: uppercase;
+}
+
+.pill-finished {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.pill-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.btn-toggle-stats {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #06b6d4;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-stats:hover {
+  background: #06b6d4;
+  color: #000000;
+}
+
+/* Cuerpo Desplegable */
+.match-accordion-body {
+  padding: 1.25rem;
+  background: #08090d;
+  border-top: 1px solid #1c2030;
+}
+
+.no-telemetry-notice {
+  padding: 2.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
