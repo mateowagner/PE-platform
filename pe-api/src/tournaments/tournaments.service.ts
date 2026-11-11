@@ -1,4 +1,4 @@
-// pe-api/src/modules/tournaments/tournaments.service.ts
+// pe-api/src/tournaments/tournaments.service.ts
 import {
   Injectable,
   BadRequestException,
@@ -8,7 +8,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, DeepPartial, Repository } from 'typeorm';
-import { Tournament, TournamentStatus } from './entities/tournament.entity';
+import {
+  Tournament,
+  TournamentStatus,
+  TournamentType,
+} from './entities/tournament.entity';
 import { Team } from '../teams/entities/team.entity';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
@@ -20,7 +24,8 @@ import {
 } from '../series/entities/series.entity';
 import { Match, MatchStatus } from '../matches/entities/match.entity';
 import { RiotService } from '../riot/riot.service';
-
+import { Standing } from '../standings/entities/standing.entity';
+import { SeriesFormat } from './entities/tournament.entity';
 @Injectable()
 export class TournamentsService {
   constructor(
@@ -36,6 +41,21 @@ export class TournamentsService {
     private readonly riotService: RiotService,
   ) {}
 
+  // Helper de cálculo de victorias requeridas y mapas máximos
+  private getFormatDetails(format: SeriesFormat): {
+    winsRequired: number;
+    maxMaps: number;
+  } {
+    switch (format) {
+      case SeriesFormat.BO1:
+        return { winsRequired: 1, maxMaps: 1 };
+      case SeriesFormat.BO5:
+        return { winsRequired: 3, maxMaps: 5 };
+      case SeriesFormat.BO3:
+      default:
+        return { winsRequired: 2, maxMaps: 3 };
+    }
+  }
   async getTournamentDetails(id: string): Promise<unknown> {
     const tournament = await this.tournamentRepository.findOne({
       where: { id },
@@ -61,7 +81,7 @@ export class TournamentsService {
       };
 
       const totalPoints = team.members.reduce((acc, member) => {
-        return acc + (tierPoints[member.soloTier?.toUpperCase()] || 0);
+        return acc + (tierPoints[member.soloTier?.toUpperCase() || ''] || 0);
       }, 0);
 
       const avgPoints =
@@ -143,9 +163,7 @@ export class TournamentsService {
           'team.tournaments',
           'tournament',
           'tournament.id = :tournamentId',
-          {
-            tournamentId,
-          },
+          { tournamentId },
         )
         .getMany();
 
@@ -187,15 +205,6 @@ export class TournamentsService {
         );
       }
 
-      /*if (
-        teamWithDetails.members.length < 5 ||
-        teamWithDetails.members.length > 8
-      ) {
-        throw new BadRequestException(
-          'El equipo debe tener entre 5 y 8 jugadores activos para inscribirse.',
-        );
-      }*/
-
       const unverifiedMember = teamWithDetails.members.find(
         (member) => !member.riotPuuid,
       );
@@ -235,7 +244,6 @@ export class TournamentsService {
     await queryRunner.startTransaction();
 
     try {
-      // 1. Bloqueo sobre el torneo sin joins
       const tournament = await queryRunner.manager
         .createQueryBuilder(Tournament, 'tournament')
         .setLock('pessimistic_write')
@@ -269,9 +277,7 @@ export class TournamentsService {
           'team.tournaments',
           'tournament',
           'tournament.id = :tournamentId',
-          {
-            tournamentId,
-          },
+          { tournamentId },
         )
         .getMany();
 
@@ -388,6 +394,7 @@ export class TournamentsService {
     });
   }
 
+  // DESPACHADOR CENTRAL: Evalúa si generar CUP o LEAGUE
   async generateFixture(tournamentId: string): Promise<Tournament> {
     const tournament = await this.tournamentRepository.findOne({
       where: { id: tournamentId },
@@ -398,30 +405,45 @@ export class TournamentsService {
       throw new NotFoundException('El torneo especificado no existe.');
     }
 
+    if (tournament.type === TournamentType.LEAGUE) {
+      return this.generateLeagueFixture(tournamentId);
+    } else if (tournament.type === TournamentType.CUP) {
+      return this.generateCupFixture(tournamentId);
+    }
+
+    throw new BadRequestException('Tipo de torneo no soportado.');
+  }
+
+  async generateCupFixture(tournamentId: string): Promise<Tournament> {
+    const tournament = await this.tournamentRepository.findOne({
+      where: { id: tournamentId },
+      relations: ['teams'],
+    });
+
+    if (!tournament)
+      throw new NotFoundException('El torneo especificado no existe.');
     if (tournament.status !== TournamentStatus.PREPARING) {
       throw new BadRequestException(
         'El fixture ya fue generado o el torneo ya comenzó.',
       );
     }
-
-    if (!tournament.riot_tournament_id) {
-      throw new BadRequestException(
-        'El torneo debe estar registrado previamente en Riot (falta riot_tournament_id).',
-      );
-    }
-
-    const teams = tournament.teams;
-    if (teams.length < 2) {
+    if (tournament.teams.length < 2) {
       throw new BadRequestException(
         'Se necesitan al menos 2 equipos para generar el fixture.',
       );
     }
 
-    const winsRequired = 2; // Bo3
-    const maxMapsPerSeries = winsRequired * 2 - 1; // 3 mapas
-    const totalSeries = teams.length - 1;
-    const totalMatchesNeeded = totalSeries * maxMapsPerSeries;
+    const teams = [...tournament.teams];
+    const defaultFmt = this.getFormatDetails(
+      tournament.default_series_format || SeriesFormat.BO3,
+    );
+    const finalFmt = this.getFormatDetails(
+      tournament.final_series_format || SeriesFormat.BO3,
+    );
 
+    // Estimación de códigos Riot necesarios
+    const totalMatchesNeeded =
+      (teams.length - 1) * Math.max(defaultFmt.maxMaps, finalFmt.maxMaps);
     const riotCodes = await this.riotService.generateTournamentCodes(
       Number(tournament.riot_tournament_id),
       totalMatchesNeeded,
@@ -436,33 +458,35 @@ export class TournamentsService {
     try {
       let currentRoundSeries: Serie[] = [];
       let currentRoundOrder = 1;
+      const baseStartTime = new Date(tournament.start_date).getTime();
+      const roundIntervalMs =
+        (Number(tournament.hours_between_rounds) || 1.5) * 60 * 60 * 1000;
 
+      // Ronda 1
+      const round1Date = new Date(baseStartTime);
       for (let i = 0; i < teams.length; i += 2) {
         const teamA = teams[i];
         const teamB = teams[i + 1];
 
-        const seriesPayload: DeepPartial<Serie> = {
+        const series = queryRunner.manager.create(Serie, {
           tournament,
           team_a: teamA,
-          wins_required: winsRequired,
+          team_b: teamB ?? undefined,
+          wins_required: defaultFmt.winsRequired,
           team_a_wins: 0,
           team_b_wins: 0,
           round_order: currentRoundOrder,
           stage_name: 'Ronda 1',
+          scheduled_date: round1Date,
           status: teamB ? SeriesStatus.PENDING : SeriesStatus.COMPLETED,
           winner: teamB ? undefined : teamA,
-        };
+        });
 
-        if (teamB) {
-          seriesPayload.team_b = teamB;
-        }
-
-        const series = queryRunner.manager.create(Serie, seriesPayload);
         const savedSeries = await queryRunner.manager.save(Serie, series);
         currentRoundSeries.push(savedSeries);
 
         if (teamB) {
-          for (let j = 1; j <= maxMapsPerSeries; j++) {
+          for (let j = 1; j <= defaultFmt.maxMaps; j++) {
             const uniqueCode = riotCodes.shift();
             const match = queryRunner.manager.create(Match, {
               series: savedSeries,
@@ -475,20 +499,26 @@ export class TournamentsService {
         }
       }
 
+      // Rondas sucesivas hasta la Gran Final
       while (currentRoundSeries.length > 1) {
         currentRoundOrder++;
         const nextRoundSeries: Serie[] = [];
         const isFinal = Math.ceil(currentRoundSeries.length / 2) === 1;
         const stageName = isFinal ? 'Gran Final' : `Ronda ${currentRoundOrder}`;
+        const activeFmt = isFinal ? finalFmt : defaultFmt;
+        const roundDate = new Date(
+          baseStartTime + (currentRoundOrder - 1) * roundIntervalMs,
+        );
 
         for (let i = 0; i < currentRoundSeries.length; i += 2) {
           const parentSeries = queryRunner.manager.create(Serie, {
             tournament,
-            wins_required: winsRequired,
+            wins_required: activeFmt.winsRequired,
             team_a_wins: 0,
             team_b_wins: 0,
             round_order: currentRoundOrder,
             stage_name: stageName,
+            scheduled_date: roundDate,
             status: SeriesStatus.PENDING,
           });
 
@@ -510,7 +540,7 @@ export class TournamentsService {
             await queryRunner.manager.save(Serie, childSeriesB);
           }
 
-          for (let j = 1; j <= maxMapsPerSeries; j++) {
+          for (let j = 1; j <= activeFmt.maxMaps; j++) {
             const uniqueCode = riotCodes.shift();
             const match = queryRunner.manager.create(Match, {
               series: savedParentSeries,
@@ -523,6 +553,138 @@ export class TournamentsService {
         }
 
         currentRoundSeries = nextRoundSeries;
+      }
+
+      tournament.status = TournamentStatus.STARTED;
+      const updatedTournament = await queryRunner.manager.save(
+        Tournament,
+        tournament,
+      );
+
+      await queryRunner.commitTransaction();
+      return updatedTournament;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  // pe-api/src/tournaments/tournaments.service.ts
+  async generateLeagueFixture(tournamentId: string): Promise<Tournament> {
+    const tournament = await this.tournamentRepository.findOne({
+      where: { id: tournamentId },
+      relations: ['teams'],
+    });
+
+    if (!tournament) throw new NotFoundException('El torneo no existe.');
+    if (tournament.type !== TournamentType.LEAGUE) {
+      throw new BadRequestException(
+        'Este método solo admite torneos de tipo LEAGUE.',
+      );
+    }
+    if (tournament.status !== TournamentStatus.PREPARING) {
+      throw new BadRequestException('El fixture ya fue generado.');
+    }
+    if (tournament.teams.length < 2) {
+      throw new BadRequestException('Se requieren al menos 2 equipos.');
+    }
+
+    const teams = [...tournament.teams];
+    const isOdd = teams.length % 2 !== 0;
+    if (isOdd) {
+      teams.push(null as unknown as Team);
+    }
+
+    const totalTeams = teams.length;
+    const totalRounds = totalTeams - 1;
+    const matchesPerRound = totalTeams / 2;
+    const fmt = this.getFormatDetails(
+      tournament.default_series_format || SeriesFormat.BO3,
+    );
+
+    const actualSeriesCount =
+      (tournament.teams.length * (tournament.teams.length - 1)) / 2;
+    const riotCodes = await this.riotService.generateTournamentCodes(
+      Number(tournament.riot_tournament_id),
+      actualSeriesCount * fmt.maxMaps,
+      tournament.map_type,
+      tournament.pick_type,
+    );
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      for (const team of tournament.teams) {
+        const initialStanding = queryRunner.manager.create(Standing, {
+          tournament,
+          team,
+          points: 0,
+          series_played: 0,
+          series_won: 0,
+          series_lost: 0,
+          matches_won: 0,
+          matches_lost: 0,
+        });
+        await queryRunner.manager.save(Standing, initialStanding);
+      }
+
+      const rotationTeams = [...teams];
+      const baseStartTime = new Date(tournament.start_date).getTime();
+      const daysIntervalMs =
+        (tournament.days_between_rounds || 7) * 24 * 60 * 60 * 1000;
+
+      for (let round = 0; round < totalRounds; round++) {
+        const roundOrder = round + 1;
+        const stageName = `Jornada ${roundOrder}`;
+        const roundDate = new Date(baseStartTime + round * daysIntervalMs);
+
+        for (let matchIndex = 0; matchIndex < matchesPerRound; matchIndex++) {
+          const teamA = rotationTeams[matchIndex];
+          const teamB = rotationTeams[totalTeams - 1 - matchIndex];
+
+          if (!teamA || !teamB) continue; // Descanso
+
+          const series = queryRunner.manager.create(Serie, {
+            tournament,
+            team_a: teamA,
+            team_b: teamB,
+            wins_required: fmt.winsRequired,
+            team_a_wins: 0,
+            team_b_wins: 0,
+            round_order: roundOrder,
+            stage_name: stageName,
+            scheduled_date: roundDate,
+            status: SeriesStatus.PENDING,
+          });
+
+          const savedSeries = await queryRunner.manager.save(Serie, series);
+
+          for (let mapOrder = 1; mapOrder <= fmt.maxMaps; mapOrder++) {
+            const uniqueCode = riotCodes.shift();
+            const match = queryRunner.manager.create(Match, {
+              series: savedSeries,
+              match_order: mapOrder,
+              status: MatchStatus.CREATED,
+              tournament_code: uniqueCode,
+            });
+            await queryRunner.manager.save(Match, match);
+          }
+        }
+
+        const fixedTeam = rotationTeams[0];
+        const restOfTeams = rotationTeams.slice(1);
+        const lastTeam = restOfTeams.pop()!;
+        restOfTeams.unshift(lastTeam);
+        rotationTeams.splice(
+          0,
+          rotationTeams.length,
+          fixedTeam,
+          ...restOfTeams,
+        );
       }
 
       tournament.status = TournamentStatus.STARTED;
