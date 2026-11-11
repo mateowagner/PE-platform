@@ -1,9 +1,14 @@
+// pe-web/src/hooks/useTeams.ts
 import { apiClient } from "../config/apiClient";
 import type { Team } from "../types";
 
+export interface CreateTeamPayload {
+  name: string;
+  logo_url?: string;
+}
+
 export function useTeams() {
   const getMyTeam = async (): Promise<Team> => {
-    // Axios lanza un error 404 automáticamente si el usuario no tiene equipo
     const res = await apiClient.get<Team>("/teams/my-team");
     return res.data;
   };
@@ -12,10 +17,31 @@ export function useTeams() {
     await apiClient.post("/teams/leave");
   };
 
-  const createTeam = async (formData: FormData): Promise<Team> => {
-    const res = await apiClient.post<Team>("/teams", { formData });
+  const createTeam = async (
+    data: FormData | CreateTeamPayload,
+  ): Promise<Team> => {
+    const res = await apiClient.post<Team>("/teams", data, {
+      headers:
+        data instanceof FormData
+          ? { "Content-Type": "multipart/form-data" }
+          : undefined,
+    });
     return res.data;
   };
+
+  const updateTeam = async (
+    teamId: string,
+    data: FormData | Partial<CreateTeamPayload>,
+  ): Promise<Team> => {
+    const res = await apiClient.patch<Team>(`/teams/${teamId}`, data, {
+      headers:
+        data instanceof FormData
+          ? { "Content-Type": "multipart/form-data" }
+          : undefined,
+    });
+    return res.data;
+  };
+
   const kickMember = async (
     teamId: string,
     memberId: string,
@@ -24,5 +50,5 @@ export function useTeams() {
     return res.data;
   };
 
-  return { getMyTeam, leaveTeam, createTeam, kickMember };
+  return { getMyTeam, leaveTeam, createTeam, updateTeam, kickMember };
 }

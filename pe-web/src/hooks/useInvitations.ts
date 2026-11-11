@@ -9,19 +9,19 @@ export function useInvitations() {
     await apiClient.post(`/invitations/${teamId}`, { userId });
   };
   const getPendingInvitations = async (): Promise<Invitation[]> => {
-    const res = await apiClient.get<{ invitations: Invitation[] }>(
+    // El backend devuelve directamente el arreglo de invitaciones
+    const res = await apiClient.get<Invitation[]>(
       "/invitations/pending-invitations",
     );
-    // Retornamos directamente el arreglo desempaquetado
-    return res.data.invitations;
+    return Array.isArray(res.data) ? res.data : [];
   };
 
   const respondToInvitation = async (
     invitationId: string,
-    action: "ACCEPT" | "REJECT",
+    action: "accept" | "reject",
   ): Promise<void> => {
     // Ajustá esta ruta si tu backend usa endpoints separados (ej: /accept o /reject)
-    await apiClient.post(`/invitations/${invitationId}/respond`, { action });
+    await apiClient.post(`/invitations/${invitationId}/${action}`);
   };
   return { sendInvitation, getPendingInvitations, respondToInvitation };
 }
