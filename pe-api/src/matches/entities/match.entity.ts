@@ -1,3 +1,4 @@
+// pe-api/src/matches/entities/match.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -22,16 +23,23 @@ export class Match {
   id!: string;
 
   @Column({ type: 'int' })
-  match_order!: number; // Indica si es el Juego 1, Juego 2, Juego 3...
+  match_order!: number;
 
   @Column({ type: 'varchar', length: 150, nullable: true })
-  riot_match_id?: string; // El ID real de la API de Riot Games después de jugarse
+  riot_match_id?: string;
 
   @Column({ type: 'varchar', length: 150, nullable: true })
-  tournament_code?: string; // Código único provisto por Riot para el lobby
+  tournament_code?: string;
+
+  // 👇 Nuevos campos para salas personalizadas del MVP
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  lobby_name?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  lobby_password?: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  stats?: Record<string, any>; // JSON crudo con KDA, oro, daño, etc.
+  stats?: Record<string, any>;
 
   @Column({
     type: 'enum',
@@ -40,26 +48,23 @@ export class Match {
   })
   status!: MatchStatus;
 
-  // --- FECHAS DE LA PARTIDA REAL (RIOT) ---
   @Column({ type: 'timestamp', nullable: true })
-  start_date?: Date; // Cuándo inició el mapa en la Grieta
+  start_date?: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  end_date?: Date; // Cuándo explotó el Nexo
+  end_date?: Date;
 
-  // --- AUDITORÍA INTERNA DEL SISTEMA ---
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at!: Date;
 
-  // --- RELACIONES ---
   @ManyToOne(() => Serie, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'series_id' })
   series!: Serie;
 
   @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'winner_id' })
-  winner?: Team; // El equipo que ganó este mapa específico
+  winner?: Team;
 }

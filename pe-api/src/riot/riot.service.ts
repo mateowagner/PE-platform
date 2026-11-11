@@ -8,6 +8,46 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 // ─── Tipos de respuesta de Riot API ─────────────────────────────────────────
 
+// ─── Tipos para MATCH-V5 ───────────────────────────────────────────────────
+
+export interface RiotMatchParticipant {
+  puuid: string;
+  riotIdGameName?: string;
+  riotIdTagline?: string;
+  summonerName?: string;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  totalDamageDealtToChampions: number;
+  goldEarned: number;
+  win: boolean;
+  teamId: number;
+  // Slots de objetos (inventario final)
+  item0: number;
+  item1: number;
+  item2: number;
+  item3: number;
+  item4: number;
+  item5: number;
+  item6: number; // Trinket / Baratija
+  roleBoundItem?: number; // Objeto de rol / misión (botas ADC, ítem soporte, jungla)
+}
+
+export interface RiotMatchDto {
+  metadata: {
+    matchId: string;
+    participants: string[];
+  };
+  info: {
+    gameDuration: number;
+    gameStartTimestamp: number;
+    gameEndTimestamp: number;
+    gameMode: string;
+    gameType: string;
+    participants: RiotMatchParticipant[];
+  };
+}
 interface RiotAccount {
   puuid: string;
   gameName: string;
@@ -276,6 +316,31 @@ export class RiotService {
       console.error('Error de Riot API:', error);
       throw new InternalServerErrorException(
         `Fallo al generar los ${count} códigos de torneo`,
+      );
+    }
+  }
+  /*
+   Obtiene la partida de Riot Games vía MATCH-V5.
+   Acepta "1621435769" o "LA2_1621435769".
+  */
+  async getMatchById(rawMatchId: string): Promise<RiotMatchDto> {
+    const formattedId = rawMatchId.startsWith('LA2_')
+      ? rawMatchId
+      : `LA2_${rawMatchId.trim()}`;
+
+    try {
+      const { data } = await this.accountClient.get<RiotMatchDto>(
+        `/lol/match/v5/matches/${formattedId}`,
+      );
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new BadRequestException(
+          `La partida "${formattedId}" no fue encontrada en los servidores de Riot Games.`,
+        );
+      }
+      throw new InternalServerErrorException(
+        'Fallo al consultar MATCH-V5 en Riot Games.',
       );
     }
   }
