@@ -1,231 +1,350 @@
+// pe-web/src/pages/DashboardPage.tsx
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { useTournaments } from "../hooks/useTournaments";
+import { useTeams } from "../hooks/useTeams";
+import { getTeamLogo, handleImageError } from "../utils/image";
+import type { Tournament, Team, Match } from "../types";
+import {
+  Trophy,
+  Calendar,
+  Shield,
+  ArrowRight,
+  PlusCircle,
+  Clock,
+  Swords,
+} from "lucide-react";
 import "./DashboardPage.css";
 
-// Escudo default para equipos sin logo
-const DEFAULT_SHIELD =
-  "https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-fill.png";
-
-const mockTournaments = [
-  {
-    id: 1,
-    name: "Copa Pulpito #12",
-    format: "Round Robin",
-    status: "REGISTRATION",
-    maxRank: "Platino",
-    slots: "6/8",
-    region: "LAS",
-  },
-  {
-    id: 2,
-    name: "Torneo Mensual Mayo",
-    format: "Eliminación Directa",
-    status: "ONGOING",
-    maxRank: "Diamante",
-    slots: "8/8",
-    region: "LAS",
-  },
-  {
-    id: 3,
-    name: "Liga Abierta S1",
-    format: "Grupos + Playoffs",
-    status: "REGISTRATION",
-    maxRank: "Esmeralda",
-    slots: "3/16",
-    region: "LAS",
-  },
-];
-
-const mockNextMatch = {
-  rival: "Team Nexus",
-  rivalLogo: null,
-  date: "Sábado 26 Abr",
-  time: "21:00 ART",
-  tournament: "Copa Pulpito #12",
-  format: "BO3",
-};
-
-const mockMatches = [
-  {
-    id: 1,
-    vs: "Los Dragones",
-    date: "Dom 27 · 20:00",
-    status: "SCHEDULED",
-    tournament: "Liga Abierta S1",
-  },
-  {
-    id: 2,
-    vs: "Dark Side",
-    date: "Lun 28 · 21:30",
-    status: "PENDING",
-    tournament: "Copa Pulpito #12",
-  },
-];
-
-const statusLabel: Record<string, { label: string; cls: string }> = {
-  REGISTRATION: { label: "Inscripción", cls: "badge-orange" },
-  ONGOING: { label: "En curso", cls: "badge-blue" },
-  FINISHED: { label: "Finalizado", cls: "badge-success" },
-  PENDING: { label: "Pendiente", cls: "badge-orange" },
-  SCHEDULED: { label: "Agendado", cls: "badge-blue" },
-};
-
 export default function DashboardPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
+
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [myTeam, setMyTeam] = useState<Team | null>(null);
+  const [pendingMatches, setPendingMatches] = useState<Match[]>([]);
+  const [finishedMatches, setFinishedMatches] = useState<Match[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { getTournaments, getTeamMatches } = useTournaments();
+  const { getMyTeam } = useTeams();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboard() {
+      try {
+        setIsLoading(true);
+
+        const [tourneys, teamData] = await Promise.all([
+          getTournaments().catch(() => []),
+          getMyTeam().catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+        setTournaments(tourneys || []);
+        setMyTeam(teamData);
+
+        if (teamData?.id) {
+          const [pending, finished] = await Promise.all([
+            getTeamMatches(teamData.id, "pending").catch(() => []),
+            getTeamMatches(teamData.id, "finished").catch(() => []),
+          ]);
+
+          if (isMounted) {
+            setPendingMatches(pending || []);
+            setFinishedMatches(finished || []);
+          }
+        }
+      } catch (err) {
+        console.error("Error al cargar el dashboard:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    void loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Filtrar torneos donde el equipo del usuario esté inscripto
+  const enrolledTournaments = useMemo(() => {
+    if (!myTeam) return [];
+
+    return tournaments.filter((t) => {
+      const isEnrolled = t.teams?.some((enrolled) => enrolled.id === myTeam.id);
+      const statusUpper = t.status?.toUpperCase();
+      const isActive =
+        statusUpper !== "FINISHED" && statusUpper !== "COMPLETED";
+
+      return isEnrolled && isActive;
+    });
+  }, [tournaments, myTeam]);
 
   return (
-    <div className="page-container dashboard-page">
-      {/* Welcome */}
-      <div className="dashboard-welcome fade-in">
+    <div className="page-container dashboard-page-root fade-in">
+      {/* ─── BANNER DE SALUDO ─────────────────────────────────────────────── */}
+      <div className="dash-welcome-card">
         <div>
-          <h1 className="dashboard-greeting">
-            Hola, <span className="gradient-text">{user?.username}</span>
+          <h1 className="dash-welcome-title">
+            HOLA,{" "}
+            <span className="text-highlight">
+              {user?.username || "INVOCADOR"}
+            </span>
           </h1>
-          <p className="dashboard-subtext">
+          <p className="dash-welcome-sub">
             {user?.riotGameName
-              ? `${user.riotGameName} · ${user.soloTier ?? "Sin rango"}`
-              : "Vinculá tu cuenta de Riot para participar en torneos"}
+              ? `${user.riotGameName}#${user.riotTagLine || ""} • ${user.soloTier ?? "UNRANKED"} ${user.soloRank ?? ""}`
+              : "Vincula tu cuenta de Riot Games para competir en torneos oficiales"}
           </p>
         </div>
         {!user?.riotGameName && (
-          <a href="/account" className="btn btn-primary">
+          <Link to="/account" className="btn btn-primary btn-sm">
             Vincular Riot ID
-          </a>
+          </Link>
         )}
       </div>
 
-      <div className="dashboard-grid">
-        {/* Izquierda - Torneos */}
-        <div>
-          {/* Próximo partido */}
-          {user?.teamId && (
-            <section className="dashboard-section fade-in-delay-1">
-              <h2 className="section-title">Próximo partido</h2>
-              <div className="next-match-card">
-                <div className="next-match-label">Partido programado</div>
-                <div className="match-teams">
-                  <div className="match-team-side">
-                    <img
-                      src="/logo.jpeg"
-                      alt="Mi equipo"
-                      className="match-team-logo"
-                    />
-                    <span className="match-team-name">Mi Equipo</span>
-                  </div>
-                  <span className="match-vs-badge">VS</span>
-                  <div className="match-team-side">
-                    <img
-                      src={mockNextMatch.rivalLogo ?? DEFAULT_SHIELD}
-                      alt={mockNextMatch.rival}
-                      className="match-team-logo"
-                    />
-                    <span className="match-team-name">
-                      {mockNextMatch.rival}
-                    </span>
-                  </div>
-                </div>
-                <div className="match-details">
-                  <div className="match-detail-row">
-                    <span className="match-detail-label">Torneo</span>
-                    <span className="match-detail-value">
-                      {mockNextMatch.tournament}
-                    </span>
-                  </div>
-                  <div className="match-detail-row">
-                    <span className="match-detail-label">Fecha</span>
-                    <span className="match-detail-value">
-                      {mockNextMatch.date} · {mockNextMatch.time}
-                    </span>
-                  </div>
-                  <div className="match-detail-row">
-                    <span className="match-detail-label">Formato</span>
-                    <span className="match-detail-value">
-                      {mockNextMatch.format}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
+      {/* ─── GRID DE 3 COLUMNAS (TORNEOS | CALENDARIO | MI EQUIPO) ────────── */}
+      <div className="dash-three-columns-grid">
+        {/* COLUMNA 1: TORNEOS ACTIVOS */}
+        <section className="dash-column">
+          <div className="dash-col-header">
+            <Trophy size={18} className="text-cyan" />
+            <h3>TORNEOS ACTIVOS</h3>
+          </div>
 
-          {/* Torneos disponibles */}
-          <section className="dashboard-section fade-in-delay-2">
-            <h2 className="section-title">Torneos activos</h2>
-            <div className="tournament-list">
-              {mockTournaments.map((t) => (
-                <div key={t.id} className="tournament-card card">
-                  <div className="tournament-card-top">
-                    <span className={`badge ${statusLabel[t.status].cls}`}>
-                      {statusLabel[t.status].label}
+          {isLoading ? (
+            <div className="dash-empty-box">
+              <p>Cargando competencias...</p>
+            </div>
+          ) : !myTeam ? (
+            <div className="dash-empty-box">
+              <Trophy size={28} className="text-muted" />
+              <p>
+                Únete a una escuadra oficial para ver tus torneos inscriptos.
+              </p>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => navigate("/tournaments")}
+              >
+                Explorar Torneos Disponibles
+              </button>
+            </div>
+          ) : enrolledTournaments.length === 0 ? (
+            <div className="dash-empty-box">
+              <Trophy size={28} className="text-muted" />
+              <p>Tu equipo no tiene torneos activos en disputa.</p>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => navigate("/tournaments")}
+              >
+                Explorar Torneos Abiertos
+              </button>
+            </div>
+          ) : (
+            <div className="dash-cards-list">
+              {enrolledTournaments.map((t) => (
+                <div key={t.id} className="dash-tourney-card">
+                  <div className="dash-card-badges">
+                    <span className="badge-pill pill-cyan">{t.status}</span>
+                    <span className="dash-text-dim">
+                      {t.type === "LEAGUE"
+                        ? "LIGA OFICIAL"
+                        : "COPA ELIMINATORIA"}
                     </span>
-                    <span className="badge badge-blue">{t.region}</span>
                   </div>
-                  <h3 className="tournament-name">{t.name}</h3>
-                  <div className="tournament-meta">
-                    <span>{t.format}</span>
-                    <span>·</span>
-                    <span>Hasta {t.maxRank}</span>
-                    <span>·</span>
-                    <span>{t.slots} equipos</span>
-                  </div>
-                  <button className="btn btn-outline btn-sm tournament-btn">
-                    Ver torneo
+                  <h4 className="dash-card-name">{t.name}</h4>
+                  <p className="dash-card-stage">
+                    Etapa: <strong>{t.current_stage || "Fase Regular"}</strong>
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm w-100"
+                    onClick={() => navigate(`/tournaments/${t.id}`)}
+                  >
+                    Ver Torneo <ArrowRight size={14} />
                   </button>
                 </div>
               ))}
             </div>
-          </section>
-        </div>
+          )}
+        </section>
 
-        {/* Derecha */}
-        <aside>
-          {/* Partidos programados */}
-          <section className="dashboard-section fade-in-delay-2">
-            <h2 className="section-title">Calendario</h2>
-            {mockMatches.length === 0 ? (
-              <div className="empty-state">No tenés partidos programados</div>
-            ) : (
-              <div className="match-list">
-                {mockMatches.map((m) => (
-                  <div key={m.id} className="match-card card">
-                    <div className="match-vs-row">
-                      <span className="match-team-label">Mi Equipo</span>
-                      <span className="match-vs-text">VS</span>
-                      <span className="match-team-label">{m.vs}</span>
-                    </div>
-                    <div className="match-info-row">
-                      <span className={`badge ${statusLabel[m.status].cls}`}>
-                        {statusLabel[m.status].label}
+        {/* COLUMNA 2 (CENTRAL): CALENDARIO DE PARTIDOS */}
+        <section className="dash-column dash-column-center">
+          <div className="dash-col-header">
+            <Calendar size={18} className="text-purple" />
+            <h3>CALENDARIO DE PARTIDOS</h3>
+          </div>
+
+          {isLoading ? (
+            <div className="dash-empty-box">
+              <p>Sincronizando agenda...</p>
+            </div>
+          ) : !myTeam ? (
+            <div className="dash-empty-box">
+              <Calendar size={28} className="text-muted" />
+              <p>Necesitas pertenecer a un equipo para disputar partidos.</p>
+            </div>
+          ) : pendingMatches.length === 0 ? (
+            <div className="dash-empty-box">
+              <Clock size={28} className="text-muted" />
+              <p>No tenés partidos programados en tu agenda por el momento.</p>
+            </div>
+          ) : (
+            <div className="dash-cards-list">
+              {pendingMatches.map((m) => {
+                const s = m.series;
+                const rival =
+                  s?.team_a?.id === myTeam.id ? s?.team_b : s?.team_a;
+                const dateFormatted = s?.scheduled_date
+                  ? new Date(s.scheduled_date).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Fecha a coordinar";
+
+                return (
+                  <div
+                    key={m.id}
+                    className="dash-match-card"
+                    onClick={() => s?.id && navigate(`/series/${s.id}`)}
+                  >
+                    <div className="match-card-top-info">
+                      <span className="match-time-tag">
+                        <Clock size={12} /> {dateFormatted}
                       </span>
-                      <span className="match-date-text">{m.date}</span>
+                      <span className="match-stage-pill">
+                        {s?.stage_name || "Mapa"} #{m.match_order}
+                      </span>
                     </div>
-                    <span className="match-tournament-text">
-                      {m.tournament}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
 
-          {/* Mi equipo */}
-          <section className="dashboard-section fade-in-delay-3">
-            <h2 className="section-title">Mi equipo</h2>
-            {user?.teamId ? (
-              <div className="card">
-                <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
-                  Cargando datos del equipo...
-                </p>
+                    <div className="match-teams-versus-row">
+                      <span className="team-cell-name truncate">
+                        {myTeam.name}
+                      </span>
+                      <span className="vs-badge">VS</span>
+                      <span className="team-cell-name truncate text-right">
+                        {rival?.name || "Por Definir"}
+                      </span>
+                    </div>
+
+                    <div className="match-card-footer">
+                      <span className="tourney-tag truncate">
+                        {s?.tournament?.name || "Torneo Oficial"}
+                      </span>
+                      <span className="go-match-link">Ir a la Sala →</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* COLUMNA 3: MI EQUIPO & RACHAS */}
+        <section className="dash-column">
+          <div className="dash-col-header">
+            <Shield size={18} className="text-gold" />
+            <h3>MI EQUIPO</h3>
+          </div>
+
+          {isLoading ? (
+            <div className="dash-empty-box">
+              <p>Cargando escuadra...</p>
+            </div>
+          ) : !myTeam ? (
+            <div className="dash-empty-box">
+              <Shield size={28} className="text-muted" />
+              <p>No pertenecés a ningún equipo todavía.</p>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => navigate("/team")}
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "0.65rem 1.1rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.03em",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  textAlign: "center",
+                  lineHeight: 1.2,
+                }}
+              >
+                <PlusCircle size={15} /> CREAR O UNIRSE A UN EQUIPO
+              </button>
+            </div>
+          ) : (
+            <div className="dash-myteam-card">
+              <div className="myteam-card-identity">
+                <img
+                  src={getTeamLogo(myTeam)}
+                  alt={myTeam.name}
+                  className="myteam-card-shield"
+                  onError={(e) => handleImageError(e, "/default-shield.svg")}
+                />
+                <div>
+                  <h4 className="myteam-card-name truncate">{myTeam.name}</h4>
+                  <span className="myteam-card-meta">
+                    Capitán: <strong>{myTeam.owner.username}</strong>
+                  </span>
+                  <span className="myteam-card-members">
+                    {myTeam.members?.length || 0} Integrantes
+                  </span>
+                </div>
               </div>
-            ) : (
-              <div className="empty-state">
-                <p>No pertenecés a ningún equipo todavía.</p>
-                <a href="/team" className="btn btn-outline btn-sm">
-                  Crear o unirse a un equipo
-                </a>
+
+              {/* Racha de los Últimos 5 Mapas */}
+              <div className="myteam-streak-box">
+                <div className="streak-header-row">
+                  <span className="streak-title">Últimos 5 Encuentros:</span>
+                  <Swords size={14} className="text-muted" />
+                </div>
+                {finishedMatches.length === 0 ? (
+                  <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+                    Sin partidos oficiales disputados.
+                  </span>
+                ) : (
+                  <div className="streak-dots-cluster">
+                    {finishedMatches.slice(0, 5).map((m) => {
+                      const isWin = m.winner?.id === myTeam.id;
+                      return (
+                        <span
+                          key={m.id}
+                          className={`streak-dot-pill ${isWin ? "dot-win" : "dot-loss"}`}
+                          title={isWin ? "Victoria" : "Derrota"}
+                        >
+                          {isWin ? "W" : "L"}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </section>
-        </aside>
+
+              <button
+                type="button"
+                className="btn btn-outline btn-sm w-100"
+                onClick={() => navigate("/team")}
+              >
+                Administrar Escuadra
+              </button>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

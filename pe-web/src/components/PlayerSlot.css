@@ -1,0 +1,142 @@
+/* pe-web/src/components/PlayerSlot.css */
+
+.player-slot-row {
+  background: #111218;
+  border: 1px solid #232536;
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.player-slot-row:hover {
+  border-color: #9333ea;
+  background: #151620;
+  transform: translateX(2px);
+}
+
+.slot-left-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.slot-order-number {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #6b7280;
+  min-width: 16px;
+}
+
+.player-avatar-circle {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  max-width: 38px;
+  max-height: 38px;
+  border-radius: 50%;
+  background: #1e1b2e;
+  border: 1px solid #3b2d54;
+  color: #c084fc;
+  font-weight: 800;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.player-name-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.player-header-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.player-username-text {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #f3f4f6;
+}
+
+.captain-tag {
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid #9333ea;
+  color: #c084fc;
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.player-riot-tagline {
+  font-size: 0.75rem;
+  color: #06b6d4;
+  font-weight: 500;
+}
+
+.slot-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.player-tier-capsule {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #181924;
+  border: 1px solid #282a3d;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+}
+
+/* BLOQUEO ESTRICTO DEL TAMAÑO DE EMBLEMA */
+.slot-rank-emblem {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 26px !important;
+  max-width: 26px !important;
+  max-height: 26px !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+.slot-rank-name {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #f3f4f6;
+}
+
+.btn-kick-member {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-kick-member:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}

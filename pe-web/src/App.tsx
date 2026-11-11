@@ -15,7 +15,7 @@ import TeamPage from "./pages/TeamPage";
 import AccountPage from "./pages/AccountPage";
 import Navbar from "./components/layout/Navbar";
 import TournamentDetailPage from "./pages/TournamentDetailPage";
-
+import SeriesDetailPage from "./pages/SeriesDetailPage";
 // Guard para rutas privadas
 function ProtectedRoute() {
   const { isAuthenticated } = useAuthStore();
@@ -59,6 +59,7 @@ export default function App() {
             <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/account" element={<AccountPage />} />
+            <Route path="/series/:id" element={<SeriesDetailPage />} />
           </Route>
         </Route>
 

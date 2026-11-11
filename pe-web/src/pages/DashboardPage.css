@@ -1,322 +1,351 @@
-.dashboard-page {
-  padding-top: 2.5rem;
-}
+/* pe-web/src/pages/DashboardPage.css */
 
-/* Welcome banner */
-.dashboard-welcome {
+.dashboard-page-root {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* Banner de Bienvenida */
+.dash-welcome-card {
+  display: flex;
   justify-content: space-between;
-  margin-bottom: 2.5rem;
+  align-items: center;
+  background: #0d0e14;
+  border: 1px solid #1e2233;
+  border-radius: 12px;
   padding: 1.5rem 2rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
-.dashboard-welcome::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--orange-bright),
-    #ffaa44,
-    transparent
-  );
-}
-
-.dashboard-greeting {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
+.dash-welcome-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.6rem;
   font-weight: 900;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  margin-bottom: 0.3rem;
+  margin: 0;
+  letter-spacing: 0.5px;
+  color: #ffffff;
 }
 
-.dashboard-subtext {
-  color: var(--text-muted);
-  font-size: 0.875rem;
+.dash-welcome-sub {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin: 0.25rem 0 0;
 }
 
-/* Main grid */
-.dashboard-grid {
+/* Grid de 3 Columnas */
+.dash-three-columns-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr 1.3fr 1fr;
   gap: 1.5rem;
   align-items: start;
 }
 
-@media (max-width: 960px) {
-  .dashboard-grid {
+@media (max-width: 1080px) {
+  .dash-three-columns-grid {
     grid-template-columns: 1fr;
   }
 }
 
-.dashboard-section {
-  margin-bottom: 2rem;
-}
-
-/* Tournament cards */
-.tournament-list {
+.dash-column {
+  background: #090a0f;
+  border: 1px solid #1a1c28;
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.tournament-card {
+.dash-column-center {
+  background: #0c0d14;
+  border-color: #202436;
+}
+
+.dash-col-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 0.6rem;
-  position: relative;
-  overflow: hidden;
+  border-bottom: 1px solid #1a1c28;
+  padding-bottom: 0.75rem;
 }
 
-.tournament-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, var(--orange-bright), var(--orange-dark));
-  border-radius: 2px 0 0 2px;
-}
-
-.tournament-card-top {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.tournament-name {
-  font-family: var(--font-display);
-  font-size: 1.15rem;
+.dash-col-header h3 {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.03em;
+  color: #f3f4f6;
+  margin: 0;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--text-primary);
 }
 
-.tournament-meta {
+/* Empty States */
+.dash-empty-box {
+  background: #111219;
+  border: 1px dashed #202436;
+  border-radius: 8px;
+  padding: 2.25rem 1.25rem;
+  text-align: center;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.dash-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Tarjeta de Torneo */
+.dash-tourney-card {
+  background: #12141e;
+  border: 1px solid #1f2335;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  flex-wrap: wrap;
+  transition: all 0.2s ease;
 }
 
-.tournament-btn {
-  align-self: flex-start;
-  margin-top: 0.25rem;
+.dash-tourney-card:hover {
+  border-color: #06b6d4;
+  transform: translateY(-2px);
 }
 
-/* Next match card */
-.next-match-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-active);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 0 20px var(--orange-glow);
+.dash-card-badges {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.next-match-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--orange-bright), #ffaa44);
+.badge-pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
 }
 
-.next-match-label {
-  font-family: var(--font-display);
-  font-size: 0.75rem;
+.pill-cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.dash-text-dim {
+  font-size: 0.65rem;
+  color: #9ca3af;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--orange-bright);
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
 }
 
-.next-match-label::before {
-  content: "";
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: var(--orange-bright);
-  border-radius: 50%;
-  animation: blink 1.2s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.2;
-  }
-}
-
-.match-teams {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.match-team-side {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-}
-
-.match-team-logo {
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  padding: 4px;
-}
-
-.match-team-name {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
+.dash-card-name {
+  font-size: 1rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-primary);
-  text-align: center;
+  color: #ffffff;
+  margin: 0;
 }
 
-.match-vs-badge {
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: var(--orange-bright);
-  background: var(--orange-subtle);
-  border: 1px solid var(--border-active);
-  padding: 0.3rem 0.7rem;
-  border-radius: var(--radius-sm);
-  letter-spacing: 0.1em;
-  flex-shrink: 0;
+.dash-card-stage {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0 0 0.5rem 0;
 }
 
-.match-details {
+.dash-card-stage strong {
+  color: #c084fc;
+}
+
+/* Tarjetas de Partidos (Agenda Central) */
+.dash-match-card {
+  background: #11131c;
+  border: 1px solid #1f2335;
+  border-left: 3px solid #06b6d4;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
+  gap: 0.65rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dash-match-card:hover {
+  border-color: #06b6d4;
+  background: #161824;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.15);
+}
+
+.match-card-top-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.match-time-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #06b6d4;
+  display: flex;
+  align-items: center;
   gap: 0.3rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border-subtle);
 }
 
-.match-detail-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.82rem;
+.match-stage-pill {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
 }
 
-.match-detail-label {
-  color: var(--text-muted);
-  font-family: var(--font-display);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.75rem;
-}
-
-.match-detail-value {
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-/* Match list */
-.match-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.match-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem 1.25rem;
-}
-
-.match-vs-row {
+.match-teams-versus-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.match-team-label {
-  font-family: var(--font-display);
+  justify-content: space-between;
   font-size: 0.95rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: #ffffff;
+}
+
+.team-cell-name {
   flex: 1;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
-.match-vs-text {
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: var(--orange-bright);
-  background: var(--orange-subtle);
-  padding: 0.15rem 0.5rem;
-  border-radius: 2px;
-  border: 1px solid var(--border-subtle);
-  letter-spacing: 0.1em;
+.vs-badge {
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #6b7280;
+  padding: 0.2rem 0.5rem;
+  background: #090a0f;
+  border-radius: 4px;
 }
 
-.match-info-row {
+.match-card-footer {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+  border-top: 1px solid #1a1d2b;
+  padding-top: 0.5rem;
 }
 
-.match-date-text {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
+.tourney-tag {
+  color: #9ca3af;
+  max-width: 170px;
 }
 
-.match-tournament-text {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+.go-match-link {
+  color: #a855f7;
+  font-weight: 700;
 }
 
-/* Empty / no team */
-.empty-state {
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  padding: 1.5rem;
-  text-align: center;
-  border: 1px dashed var(--border-subtle);
-  border-radius: var(--radius-md);
+/* Columna de Mi Equipo */
+.dash-myteam-card {
+  background: #11131c;
+  border: 1px solid #1f2335;
+  border-radius: 8px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.myteam-card-identity {
+  display: flex;
   align-items: center;
+  gap: 0.85rem;
+}
+
+.myteam-card-shield {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  background: transparent;
+  filter: drop-shadow(0 0 10px rgba(147, 51, 234, 0.4));
+}
+
+.myteam-card-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  max-width: 170px;
+}
+
+.myteam-card-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.myteam-card-members {
+  display: block;
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.myteam-streak-box {
+  background: #0a0b10;
+  border: 1px solid #1a1d2a;
+  border-radius: 6px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.streak-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.streak-title {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.streak-dots-cluster {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.streak-dot-pill {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot-win {
+  background: #10b981;
+  color: #06070a;
+}
+
+.dot-loss {
+  background: #ef4444;
+  color: #ffffff;
+}
+.empty-tournaments-msg {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6b7280;
+  border: 1px dashed #1f2335;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
 }
