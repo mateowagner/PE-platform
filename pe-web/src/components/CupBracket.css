@@ -1,0 +1,394 @@
+/* pe-web/src/components/CupBracket.css */
+
+.bracket-symmetric-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3.5rem;
+  width: 100%;
+  padding: 2.5rem 1rem;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.bracket-side {
+  display: flex;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+.bracket-round-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 220px;
+  min-width: 220px;
+}
+
+.round-column-header {
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.round-title-tag {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #06b6d4;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.8rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.round-series-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 2.5rem;
+  height: 100%;
+  width: 100%;
+}
+
+/* ─── TARJETAS DE SERIE ─────────────────────────────────────────────────── */
+.bracket-node {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.bracket-series-card {
+  background: #0d0e16;
+  border: 1px solid #1e2233;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 220px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2;
+}
+
+.bracket-series-card:hover {
+  border-color: #06b6d4;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+  transform: translateY(-2px);
+}
+
+.series-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+
+.series-format-badge {
+  font-size: 0.62rem;
+  font-weight: 900;
+  background: rgba(6, 182, 212, 0.12);
+  color: #06b6d4;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+}
+
+/* Indicadores de Estado (Live y Completed) */
+.series-status-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.series-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #374151;
+  transition: all 0.2s ease;
+}
+
+.series-indicator-dot.dot-completed {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.live-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+}
+
+.live-dot-pulse {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+  animation: pulseLive 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseLive {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.4;
+  }
+}
+
+.bracket-series-card.series-live {
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.15);
+}
+
+/* Slots de Equipo */
+.bracket-slot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 0.25rem;
+}
+
+.slot-winner {
+  background: rgba(16, 185, 129, 0.1);
+  border-left: 2px solid #10b981;
+}
+
+.slot-team-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+.bracket-team-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.slot-icon-tbd {
+  opacity: 0.35;
+  filter: grayscale(100%);
+}
+
+.bracket-team-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  max-width: 125px;
+}
+
+.bracket-team-name.text-muted {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.bracket-score {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #9ca3af;
+}
+
+.slot-winner .bracket-score {
+  color: #10b981;
+}
+
+/* ─── GRAN FINAL HOMOGÉNEA ────────────────────────────────────────────────── */
+.bracket-center-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  min-width: 220px;
+  position: relative;
+  z-index: 2;
+}
+
+.final-trophy-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+
+.trophy-center-icon {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.55));
+}
+
+.final-stage-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.95rem;
+  color: #fbbf24;
+  letter-spacing: 1px;
+  margin: 0;
+  font-weight: 900;
+}
+
+.final-card-wrapper {
+  width: 100%;
+}
+
+.bracket-series-card.is-grand-final {
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.15);
+}
+
+.bracket-series-card.is-grand-final:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.35);
+}
+
+/* ─── LÍNEAS CONECTORAS ORTOGONALES (ESTILO HORQUILLA) ────────────────────── */
+
+/* 1. LADO IZQUIERDO */
+.bracket-left-side .node-left.pos-top::before,
+.bracket-left-side .node-left.pos-bottom::before {
+  content: "";
+  position: absolute;
+  right: -1.75rem;
+  top: 50%;
+  width: 1.75rem;
+  height: 2px;
+  background: #1e2233;
+  z-index: 1;
+}
+
+.bracket-left-side .node-left.pos-top::after {
+  content: "";
+  position: absolute;
+  right: -1.75rem;
+  top: 50%;
+  width: 2px;
+  height: calc(50% + 1.25rem);
+  background: #1e2233;
+  z-index: 1;
+}
+
+.bracket-left-side .node-left.pos-bottom::after {
+  content: "";
+  position: absolute;
+  right: -1.75rem;
+  bottom: 50%;
+  width: 2px;
+  height: calc(50% + 1.25rem);
+  background: #1e2233;
+  z-index: 1;
+}
+
+/* Conexión directa horizontal hacia la Semifinal */
+.bracket-left-side .node-left.pos-semi::before {
+  content: "";
+  position: absolute;
+  left: -1.75rem;
+  top: 50%;
+  width: 1.75rem;
+  height: 2px;
+  background: #1e2233;
+  z-index: 1;
+}
+
+/* De Semis a la Gran Final */
+.bracket-left-side .node-left.pos-semi::after {
+  content: "";
+  position: absolute;
+  right: -3.5rem;
+  top: 50%;
+  width: 3.5rem;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4, rgba(234, 179, 8, 0.6));
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+  z-index: 1;
+}
+
+/* 2. LADO DERECHO */
+.bracket-right-side .node-right.pos-top::before,
+.bracket-right-side .node-right.pos-bottom::before {
+  content: "";
+  position: absolute;
+  left: -1.75rem;
+  top: 50%;
+  width: 1.75rem;
+  height: 2px;
+  background: #1e2233;
+  z-index: 1;
+}
+
+.bracket-right-side .node-right.pos-top::after {
+  content: "";
+  position: absolute;
+  left: -1.75rem;
+  top: 50%;
+  width: 2px;
+  height: calc(50% + 1.25rem);
+  background: #1e2233;
+  z-index: 1;
+}
+
+.bracket-right-side .node-right.pos-bottom::after {
+  content: "";
+  position: absolute;
+  left: -1.75rem;
+  bottom: 50%;
+  width: 2px;
+  height: calc(50% + 1.25rem);
+  background: #1e2233;
+  z-index: 1;
+}
+
+/* Conexión directa horizontal hacia la Semifinal derecha */
+.bracket-right-side .node-right.pos-semi::before {
+  content: "";
+  position: absolute;
+  right: -1.75rem;
+  top: 50%;
+  width: 1.75rem;
+  height: 2px;
+  background: #1e2233;
+  z-index: 1;
+}
+
+/* De Semis a la Gran Final */
+.bracket-right-side .node-right.pos-semi::after {
+  content: "";
+  position: absolute;
+  left: -3.5rem;
+  top: 50%;
+  width: 3.5rem;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.6), #06b6d4);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+  z-index: 1;
+}
+
+/* Iluminación de series concluidas */
+.node-left:has(.series-completed)::before,
+.node-left:has(.series-completed)::after,
+.node-right:has(.series-completed)::before,
+.node-right:has(.series-completed)::after {
+  background: #06b6d4;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.55);
+}

@@ -1,13 +1,27 @@
-import { Calendar, Users, Trophy, ShieldAlert } from "lucide-react";
-import type { TournamentDetails } from "../types";
+// pe-web/src/components/TournamentHeader.tsx
+import {
+  Calendar,
+  Users,
+  Trophy,
+  ShieldAlert,
+  Edit3,
+  Star,
+  UserCheck,
+} from "lucide-react";
+import type { TournamentDetails, Team, Member } from "../types";
+import { getTeamLogo, handleImageError } from "../utils/image";
+import "./TournamentHeader.css";
 
 interface TournamentHeaderProps {
   tournament: TournamentDetails;
-  user: any;
-  myTeam: any;
+  user: { id: string; username: string } | null;
+  myTeam: Team | null;
   isAlreadyInscribed: boolean;
+  registeredStarters?: Member[];
+  registeredSubs?: Member[];
   actionLoading: boolean;
   onInscribe: () => void;
+  onEditRoster: () => void;
   onCancel: () => void;
 }
 
@@ -16,11 +30,15 @@ export const TournamentHeader = ({
   user,
   myTeam,
   isAlreadyInscribed,
+  registeredStarters = [],
+  registeredSubs = [],
   actionLoading,
   onInscribe,
+  onEditRoster,
   onCancel,
 }: TournamentHeaderProps) => {
-  // La lógica visual se encapsula en el componente presentacional
+  const isCaptain = myTeam && user && myTeam.owner.id === user.id;
+
   const formatPrice = (fee: string | number) => {
     const numericFee = typeof fee === "string" ? parseFloat(fee) : fee;
     return numericFee === 0 ? "Gratuito" : `$${numericFee.toLocaleString()}`;
@@ -28,86 +46,142 @@ export const TournamentHeader = ({
 
   return (
     <div className="tournament-main-card">
-      <span className="badge-status status-preparing">
-        Inscripciones Abiertas
-      </span>
+      <div className="tournament-card-top-row">
+        <span className="badge-status status-preparing">
+          Inscripciones Abiertas
+        </span>
+        {isAlreadyInscribed && (
+          <span className="inscribed-success-pill">✓ Equipo Inscripto</span>
+        )}
+      </div>
+
       <h1 className="tournament-title">{tournament.name}</h1>
       <p className="tournament-desc">
         {tournament.description || "Sin descripción disponible."}
       </p>
 
+      {/* Grid de Metadatos */}
       <div className="info-meta-grid">
         <div className="meta-item">
-          <Calendar size={20} className="icon-purple" />
+          <Calendar size={18} className="icon-cyan" />
           <div>
-            <label>Inicio del Torneo</label>
+            <label>Inicio Oficial</label>
             <span>
               {new Date(tournament.start_date).toLocaleDateString("es-AR", {
                 day: "numeric",
-                month: "long",
+                month: "short",
                 year: "numeric",
               })}
             </span>
           </div>
         </div>
+
         <div className="meta-item">
-          <Users size={20} className="icon-purple" />
+          <Users size={18} className="icon-cyan" />
           <div>
-            <label>Cupos Disponibles</label>
+            <label>Cupos</label>
             <span>
-              {tournament.currentTeamsCount} / {tournament.max_teams} Equipos
+              {tournament.currentTeamsCount} / {tournament.max_teams} Escuadras
             </span>
           </div>
         </div>
+
         <div className="meta-item">
-          <Trophy size={20} className="icon-purple" />
+          <Trophy size={18} className="icon-gold" />
           <div>
-            <label>Premios / Prize Pool</label>
-            <span>{tournament.prize_pool || "Inscripción de Honor"}</span>
+            <label>Premios</label>
+            <span>{tournament.prize_pool || "Honor & Gloria"}</span>
           </div>
         </div>
+
         <div className="meta-item">
-          <label className="text-label">Costo de inscripción:</label>
+          <label className="text-label">Inscripción</label>
           <span className="fee-text">{formatPrice(tournament.entry_fee)}</span>
         </div>
       </div>
 
+      {/* Roster Activo Inscripto (Si el equipo ya está anotado) */}
+      {isAlreadyInscribed && myTeam && (
+        <div className="active-roster-display-box">
+          <div className="active-roster-header">
+            <div className="team-roster-identity">
+              <img
+                src={getTeamLogo(myTeam)}
+                alt={myTeam.name}
+                className="inscribed-team-logo"
+                onError={(e) => handleImageError(e, "/logo.jpeg")}
+              />
+              <div>
+                <h4>Plantilla Registrada: {myTeam.name}</h4>
+                <span>Lista de buena fe confirmada</span>
+              </div>
+            </div>
+
+            {isCaptain && (
+              <button
+                type="button"
+                className="btn-edit-roster-inline"
+                onClick={onEditRoster}
+                disabled={actionLoading}
+                title="Modificar Titulares y Suplentes"
+              >
+                <Edit3 size={14} /> Modificar Roster
+              </button>
+            )}
+          </div>
+
+          <div className="roster-chips-grid">
+            {registeredStarters.map((m, idx) => (
+              <div key={m.id} className="roster-chip chip-starter">
+                <Star size={11} className="text-gold" />
+                <span className="chip-name truncate">{m.username}</span>
+                <span className="chip-pos-tag">T{idx + 1}</span>
+              </div>
+            ))}
+
+            {registeredSubs.map((m, idx) => (
+              <div key={m.id} className="roster-chip chip-sub">
+                <UserCheck size={11} className="text-purple" />
+                <span className="chip-name truncate">{m.username}</span>
+                <span className="chip-pos-tag">S{idx + 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Botones de Acción */}
       <div className="tournament-actions-panel">
         {myTeam ? (
-          myTeam.owner.id === user?.id ? (
-            myTeam.members.length >= 0 ? (
-              isAlreadyInscribed ? (
-                <button
-                  className="btn btn-danger btn-lg w-100"
-                  onClick={onCancel}
-                  disabled={actionLoading}
-                >
-                  DAR DE BAJA EQUIPO
-                </button>
-              ) : (
-                <button
-                  className="btn btn-primary btn-lg w-100"
-                  onClick={onInscribe}
-                  disabled={
-                    actionLoading ||
-                    tournament.currentTeamsCount >= tournament.max_teams
-                  }
-                >
-                  INSCRIBIR MI EQUIPO
-                </button>
-              )
+          isCaptain ? (
+            isAlreadyInscribed ? (
+              <button
+                type="button"
+                className="btn btn-danger btn-lg w-100"
+                onClick={onCancel}
+                disabled={actionLoading}
+              >
+                Dar de Baja Inscripción
+              </button>
             ) : (
-              <div className="warning-box">
-                <ShieldAlert size={18} />
-                <p>El roster debe tener miembros activos para competir.</p>
-              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-lg w-100"
+                onClick={onInscribe}
+                disabled={
+                  actionLoading ||
+                  tournament.currentTeamsCount >= tournament.max_teams
+                }
+              >
+                Inscribir Escuadra (Armar Roster)
+              </button>
             )
           ) : (
             <div className="warning-box">
               <ShieldAlert size={18} />
               <p>
-                Solo el capitán ({myTeam.owner.username}) puede inscribir al
-                equipo.
+                Solo el capitán ({myTeam.owner.username}) puede gestionar la
+                inscripción.
               </p>
             </div>
           )
@@ -115,8 +189,8 @@ export const TournamentHeader = ({
           <div className="warning-box">
             <ShieldAlert size={18} />
             <p>
-              Necesitás pertenecer o ser capitán de un equipo para poder
-              inscribirte.
+              Debes pertenecer a una escuadra oficial para participar en
+              torneos.
             </p>
           </div>
         )}

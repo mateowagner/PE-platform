@@ -1,180 +1,301 @@
-import { Trophy, Eye } from "lucide-react";
+// pe-web/src/components/CupBracket.tsx
+import { useMemo } from "react";
 import type { TournamentSeries } from "../types";
+import { getStageTitle } from "../utils/bracketHelper";
+import { getTeamLogo, handleImageError } from "../utils/image";
+import { Trophy } from "lucide-react";
+import "./CupBracket.css";
 
 interface CupBracketProps {
   series: TournamentSeries[];
-  onMatchClick: (seriesId: string) => void;
+  onMatchClick?: (seriesId: string) => void;
 }
 
 export const CupBracket = ({ series, onMatchClick }: CupBracketProps) => {
-  // 1. Agrupación matemática de las llaves
-  const roundsMap = series.reduce(
-    (acc: Record<number, TournamentSeries[]>, item) => {
-      if (!acc[item.round_order]) acc[item.round_order] = [];
-      acc[item.round_order].push(item);
-      return acc;
-    },
-    {},
-  );
+  // 1. Identificar la Gran Final
+  const finalSeries = useMemo(() => {
+    return (
+      series.find(
+        (s) =>
+          !s.next_series &&
+          !s.parent_series_id &&
+          s.stage_name?.toLowerCase().includes("final"),
+      ) ||
+      series.find((s) => s.stage_name === "Gran Final") ||
+      series.find(
+        (s) =>
+          s.round_order ===
+          Math.max(...series.map((item) => item.round_order || 1)),
+      ) ||
+      series[series.length - 1]
+    );
+  }, [series]);
 
-  const totalRoundsCount = Object.keys(roundsMap).length;
+  // 2. Profundidad total de rondas
+  const maxRounds = useMemo(() => {
+    if (series.length === 0) return 1;
+    return Math.max(...series.map((s) => s.round_order || 1));
+  }, [series]);
 
-  if (totalRoundsCount === 0) {
-    return <div className="empty-list-text">No hay llaves generadas.</div>;
+  // 3. Separación por lados respetando las ramas hacia la Gran Final
+  const { leftRounds, rightRounds } = useMemo(() => {
+    const roundsMap: Record<number, TournamentSeries[]> = {};
+
+    series.forEach((s) => {
+      const r = s.round_order || 1;
+      if (!roundsMap[r]) roundsMap[r] = [];
+      roundsMap[r].push(s);
+    });
+
+    // Ordenamiento consistente para mantener el árbol de llaves sin saltos
+    Object.keys(roundsMap).forEach((rKey) => {
+      roundsMap[Number(rKey)].sort((a, b) => {
+        const orderA =
+          (a as unknown as { order?: number; match_order?: number }).order ??
+          (a as unknown as { order?: number; match_order?: number })
+            .match_order ??
+          0;
+        const orderB =
+          (b as unknown as { order?: number; match_order?: number }).order ??
+          (b as unknown as { order?: number; match_order?: number })
+            .match_order ??
+          0;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.id.localeCompare(b.id);
+      });
+    });
+
+    const left: { round: number; series: TournamentSeries[]; title: string }[] =
+      [];
+    const right: {
+      round: number;
+      series: TournamentSeries[];
+      title: string;
+    }[] = [];
+
+    // Semifinales (maxRounds - 1): la primera va a la izquierda, la segunda a la derecha
+    const semiRound = maxRounds - 1;
+    const semiSeries = roundsMap[semiRound] || [];
+    const leftSemi = semiSeries[0];
+    const rightSemi = semiSeries[1];
+
+    for (let r = 1; r < maxRounds; r++) {
+      const currentRoundSeries = roundsMap[r] || [];
+      const distanceToFinal = maxRounds - r;
+      const title = getStageTitle(distanceToFinal);
+
+      if (r === semiRound) {
+        left.push({ round: r, series: leftSemi ? [leftSemi] : [], title });
+        right.push({ round: r, series: rightSemi ? [rightSemi] : [], title });
+      } else {
+        // Para rondas anteriores (Cuartos), asignamos según el next_series_id
+        let leftGroup: TournamentSeries[] = [];
+        let rightGroup: TournamentSeries[] = [];
+
+        if (leftSemi && rightSemi) {
+          leftGroup = currentRoundSeries.filter(
+            (s) =>
+              s.next_series?.id === leftSemi.id ||
+              (s as any).next_series_id === leftSemi.id,
+          );
+          rightGroup = currentRoundSeries.filter(
+            (s) =>
+              s.next_series?.id === rightSemi.id ||
+              (s as any).next_series_id === rightSemi.id,
+          );
+        }
+
+        // Si no vienen enlazados explícitamente por ID, dividir por mitades simétricas
+        if (leftGroup.length === 0 && rightGroup.length === 0) {
+          const half = Math.ceil(currentRoundSeries.length / 2);
+          leftGroup = currentRoundSeries.slice(0, half);
+          rightGroup = currentRoundSeries.slice(half);
+        }
+
+        left.push({ round: r, series: leftGroup, title });
+        right.push({ round: r, series: rightGroup, title });
+      }
+    }
+
+    return { leftRounds: left, rightRounds: right };
+  }, [series, maxRounds]);
+
+  if (!series || series.length === 0) {
+    return (
+      <div className="empty-bracket-state">
+        <p>No se han generado llaves para este torneo.</p>
+      </div>
+    );
   }
 
-  const finalRoundOrder = Math.max(...Object.keys(roundsMap).map(Number));
-  const finalMatch = roundsMap[finalRoundOrder]?.[0];
-  const previousRoundsOrders = Object.keys(roundsMap)
-    .map(Number)
-    .filter((r) => r !== finalRoundOrder)
-    .sort((a, b) => a - b);
+  const renderSeriesCard = (s: TournamentSeries, isFinal = false) => {
+    const isCompleted = s.status === "COMPLETED";
+    // Serie en disputa: status STARTED o ya se jugó un mapa pero aún no hay ganador
+    const isLive =
+      !isCompleted &&
+      (s.status === "IN_PROGRESS" ||
+        (s.team_a_wins ?? 0) > 0 ||
+        (s.team_b_wins ?? 0) > 0);
 
-  // 2. Sub-componente presentacional aislado para cada serie
-  const BracketMatchCard = ({ match }: { match: TournamentSeries }) => {
-    const isLive = match.status === "IN_PROGRESS";
+    const formatLabel = `BO${s.wins_required ? s.wins_required * 2 - 1 : 1}`;
+
+    const teamAWon =
+      isCompleted && s.winner?.id && s.winner.id === s.team_a?.id;
+    const teamBWon =
+      isCompleted && s.winner?.id && s.winner.id === s.team_b?.id;
 
     return (
       <div
-        className={`hltv-match-card-wrapper ${isLive ? "hltv-card-live-border" : ""}`}
-        onClick={() => onMatchClick(match.id)}
-        title="Click para ver estadísticas de la serie"
-        // Atributos de datos (Dataset) preparados para la inyección del parent_series_id
-        data-series-id={match.id}
-        data-parent-id={match.parent_series_id || ""}
+        key={s.id}
+        className={`bracket-series-card ${
+          isCompleted ? "series-completed" : ""
+        } ${isLive ? "series-live" : ""} ${isFinal ? "is-grand-final" : ""}`}
+        onClick={() => onMatchClick?.(s.id)}
       >
-        <div className="hltv-card-top-meta">
-          <span className="hltv-series-format-tag">
-            MEJOR DE {match.wins_required * 2 - 1}
-          </span>
-          {isLive ? (
-            <span className="hltv-live-indicator">
-              <span className="live-dot" /> LIVE
-            </span>
-          ) : (
+        <div className="series-card-header">
+          <div className="series-status-indicator">
+            {isLive ? (
+              <span className="live-pill-badge">
+                <span className="live-dot-pulse" />
+                LIVE
+              </span>
+            ) : (
+              <span
+                className={`series-indicator-dot ${
+                  isCompleted ? "dot-completed" : ""
+                }`}
+              />
+            )}
+          </div>
+          <span className="series-format-badge">{formatLabel}</span>
+        </div>
+
+        {/* Team A */}
+        <div className={`bracket-slot ${teamAWon ? "slot-winner" : ""}`}>
+          <div className="slot-team-meta">
+            <img
+              src={getTeamLogo(s.team_a)}
+              alt={s.team_a?.name || "Por Definir"}
+              className={`bracket-team-icon ${!s.team_a ? "slot-icon-tbd" : ""}`}
+              onError={(e) => handleImageError(e, "/default-shield.svg")}
+            />
             <span
-              className={`hltv-status-badge status-${match.status.toLowerCase()}`}
+              className={`bracket-team-name truncate ${
+                !s.team_a ? "text-muted" : ""
+              }`}
             >
-              {match.status}
-            </span>
-          )}
-        </div>
-
-        <div className="hltv-card-teams-block">
-          <div
-            className={`hltv-team-row ${match.winner?.id === match.team_a?.id ? "hltv-row-winner" : ""}`}
-          >
-            <div className="hltv-team-identity">
-              <div className="hltv-team-logo-placeholder">
-                {match.team_a?.name?.charAt(0).toUpperCase() || "?"}
-              </div>
-              <span className="hltv-team-name-text">
-                {match.team_a?.name || "Por Clasificar"}
-              </span>
-            </div>
-            <span className="hltv-team-score-num">
-              {match.status === "PENDING" && !match.team_a
-                ? "-"
-                : match.team_a_wins}
+              {s.team_a?.name || "Por Definir"}
             </span>
           </div>
-
-          <div className="hltv-row-divider" />
-
-          <div
-            className={`hltv-team-row ${match.winner?.id === match.team_b?.id ? "hltv-row-winner" : ""}`}
-          >
-            <div className="hltv-team-identity">
-              <div className="hltv-team-logo-placeholder">
-                {match.team_b?.name?.charAt(0).toUpperCase() || "?"}
-              </div>
-              <span className="hltv-team-name-text">
-                {match.team_b?.name || "Por Clasificar"}
-              </span>
-            </div>
-            <span className="hltv-team-score-num">
-              {match.status === "PENDING" && !match.team_b
-                ? "-"
-                : match.team_b_wins}
-            </span>
-          </div>
+          <span className="bracket-score">{s.team_a_wins ?? 0}</span>
         </div>
 
-        <div className="hltv-card-footer-action">
-          <span className="hltv-action-text">
-            <Eye size={12} /> Ver estadísticas
-          </span>
+        {/* Team B */}
+        <div className={`bracket-slot ${teamBWon ? "slot-winner" : ""}`}>
+          <div className="slot-team-meta">
+            <img
+              src={getTeamLogo(s.team_b)}
+              alt={s.team_b?.name || "Por Definir"}
+              className={`bracket-team-icon ${!s.team_b ? "slot-icon-tbd" : ""}`}
+              onError={(e) => handleImageError(e, "/default-shield.svg")}
+            />
+            <span
+              className={`bracket-team-name truncate ${
+                !s.team_b ? "text-muted" : ""
+              }`}
+            >
+              {s.team_b?.name || "Por Definir"}
+            </span>
+          </div>
+          <span className="bracket-score">{s.team_b_wins ?? 0}</span>
         </div>
       </div>
     );
   };
 
-  // 3. Orquestación del Grid elástico (Vista)
   return (
-    <div className="bracket-viewport">
-      <div
-        className="cup-mirror-elastic-grid"
-        style={{
-          gridTemplateColumns: `repeat(${previousRoundsOrders.length}, 1fr) 1.2fr repeat(${previousRoundsOrders.length}, 1fr)`,
-        }}
-      >
-        {/* RAMA IZQUIERDA */}
-        {previousRoundsOrders.map((rOrder) => {
-          const roundMatches = roundsMap[rOrder] || [];
-          const leftBranchMatches = roundMatches.slice(
-            0,
-            Math.ceil(roundMatches.length / 2),
-          );
-          const stageTitle =
-            leftBranchMatches[0]?.stage_name || `Ronda ${rOrder}`;
-
-          return (
-            <div key={`left-${rOrder}`} className="cup-elastic-column">
-              <h3 className="cup-stage-title">{stageTitle}</h3>
-              <div className="matches-column-flow">
-                {leftBranchMatches.map((match) => (
-                  <BracketMatchCard key={match.id} match={match} />
-                ))}
-              </div>
+    <div className="bracket-symmetric-wrapper">
+      {/* ─── LADO IZQUIERDO ─── */}
+      <div className="bracket-side bracket-left-side">
+        {leftRounds.map((rData, roundIdx) => (
+          <div
+            key={`left-r-${rData.round}`}
+            className={`bracket-round-column left-col-${roundIdx}`}
+          >
+            <div className="round-column-header">
+              <span className="round-title-tag">{rData.title}</span>
             </div>
-          );
-        })}
+            <div className="round-series-column">
+              {rData.series.map((s, sIdx) => {
+                const isSemi = roundIdx === leftRounds.length - 1;
+                const posClass = !isSemi
+                  ? sIdx % 2 === 0
+                    ? "pos-top"
+                    : "pos-bottom"
+                  : "pos-semi";
 
-        {/* NODO CENTRAL (GRAN FINAL) */}
-        <div className="cup-elastic-column branch-center-highlight">
-          <div className="trophy-cup-icon-wrapper">
-            <Trophy size={28} className="gold-glow-icon" />
+                return (
+                  <div
+                    key={s.id}
+                    className={`bracket-node node-left ${posClass}`}
+                  >
+                    {renderSeriesCard(s)}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <h3 className="cup-stage-title grand-final-title">Gran Final</h3>
-          {finalMatch ? (
-            <BracketMatchCard match={finalMatch} />
-          ) : (
-            <div className="hltv-match-card-wrapper empty-card">
-              Por Definir
-            </div>
-          )}
+        ))}
+      </div>
+
+      {/* ─── CENTRO: GRAN FINAL ─── */}
+      <div className="bracket-center-final">
+        <div className="final-trophy-block">
+          <Trophy size={44} className="trophy-center-icon" />
+          <h3 className="final-stage-title">GRAN FINAL</h3>
         </div>
 
-        {/* RAMA DERECHA */}
-        {[...previousRoundsOrders].reverse().map((rOrder) => {
-          const roundMatches = roundsMap[rOrder] || [];
-          const rightBranchMatches = roundMatches.slice(
-            Math.ceil(roundMatches.length / 2),
-          );
-          const stageTitle =
-            rightBranchMatches[0]?.stage_name || `Ronda ${rOrder}`;
+        {finalSeries && (
+          <div className="final-card-wrapper bracket-node node-center">
+            {renderSeriesCard(finalSeries, true)}
+          </div>
+        )}
+      </div>
 
-          return (
-            <div key={`right-${rOrder}`} className="cup-elastic-column">
-              <h3 className="cup-stage-title">{stageTitle}</h3>
-              <div className="matches-column-flow">
-                {rightBranchMatches.map((match) => (
-                  <BracketMatchCard key={match.id} match={match} />
-                ))}
-              </div>
+      {/* ─── LADO DERECHO ─── */}
+      <div className="bracket-side bracket-right-side">
+        {[...rightRounds].reverse().map((rData, roundIdx) => (
+          <div
+            key={`right-r-${rData.round}`}
+            className={`bracket-round-column right-col-${roundIdx}`}
+          >
+            <div className="round-column-header">
+              <span className="round-title-tag">{rData.title}</span>
             </div>
-          );
-        })}
+            <div className="round-series-column">
+              {rData.series.map((s, sIdx) => {
+                const isSemi = roundIdx === 0;
+                const posClass = !isSemi
+                  ? sIdx % 2 === 0
+                    ? "pos-top"
+                    : "pos-bottom"
+                  : "pos-semi";
+
+                return (
+                  <div
+                    key={s.id}
+                    className={`bracket-node node-right ${posClass}`}
+                  >
+                    {renderSeriesCard(s)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

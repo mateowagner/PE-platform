@@ -1,443 +1,154 @@
-/* ==========================================================================
-   TOURNAMENT DETAIL & HLTV COMPETITION STYLES
-   ========================================================================== */
+/* pe-web/src/pages/TournamentDetailPage.css */
 
-.tournament-details-page {
-  padding-bottom: 4rem;
+/* Eliminamos cualquier margen lateral o encajonamiento y cubrimos el 100% */
+.tournament-fullscreen-root {
+  position: relative;
+  min-height: 100vh;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  background-color: #06070a;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 42px 42px;
+  padding: 1.5rem 3rem 5rem 3rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
-.tournament-top-bar {
+/* ─── BARRA DE RETORNO Y ACCIONES (100% WIDTH) ─────────────────────────────── */
+.tournament-top-strip {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
 }
 
 .btn-back {
-  background: none;
-  border: none;
-  color: var(--text-muted, #a0aec0);
+  background: rgba(18, 18, 26, 0.9);
+  border: 1px solid #2a2a38;
+  color: #9ca3af;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s ease;
+}
+
+.btn-back:hover {
+  background: #181822;
+  color: #f3f4f6;
+  border-color: #06b6d4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+}
+
+.admin-zone-bar {
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-title {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-.btn-back:hover {
-  color: #fff;
-}
-
-.btn-test-fixture {
-  background: transparent;
-  border: 1px dashed var(--primary, #8b5cf6);
-  color: var(--primary);
-  font-weight: 700;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.btn-test-fixture:hover {
-  background: var(--primary);
-  color: #fff;
-}
-
-/* Layout Pre-Torneo (Inscripciones) */
-.tournament-grid-layout {
-  display: grid;
-  grid-template-columns: 1.8fr 1.2fr;
-  gap: 2rem;
-}
-.tournament-main-card,
-.tournament-sidebar {
-  background: var(--bg-card, #141923);
-  border: 1px solid var(--border-subtle, #222b3c);
-  border-radius: 6px;
-  padding: 2rem;
-}
-
-.info-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  padding: 1.5rem 0;
-  border-top: 1px solid #222b3c;
-  border-bottom: 1px solid #222b3c;
-  margin: 1.5rem 0;
-}
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.meta-item label {
-  display: block;
+  color: #f3f4f6;
   font-size: 0.8rem;
-  color: #718096;
-}
-.meta-item span {
-  font-weight: 600;
-  color: #fff;
-}
-.fee-text {
-  color: #10b981;
-  font-weight: 700;
-}
-
-.participant-item-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  margin-bottom: 0.5rem;
-}
-.participant-avatar-placeholder {
-  width: 32px;
-  height: 32px;
-  background: var(--primary);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-}
-
-/* Workspace Competitiva Ancha */
-.layout-competition-view {
-  max-width: 100% !important;
-  width: 100% !important;
-  padding: 1rem 2rem;
-}
-.competition-minimal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #111622;
-  border: 1px solid #222b3c;
-  padding: 1.25rem 2rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-}
-.comp-title {
-  font-size: 1.5rem;
   font-weight: 800;
-  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* ─── BANNER DE CABECERA (NOMBRE AL CENTRO, 100% ANCHO) ────────────────────── */
+.competition-banner-full {
+  background: rgba(11, 12, 18, 0.85);
+  border: 1px solid #1e2233;
+  border-radius: 12px;
+  padding: 1.25rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+  box-sizing: border-box;
+}
+
+.banner-side-empty {
+  display: block;
+}
+
+.banner-center-info {
+  text-align: center;
+}
+
+.comp-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.8rem;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   margin: 0;
 }
+
 .comp-subtitle {
   font-size: 0.8rem;
-  color: #718096;
-  margin: 0.25rem 0 0 0;
-  text-transform: uppercase;
+  color: #9ca3af;
+  margin-top: 0.25rem;
 }
+
 .highlight-purple {
-  color: var(--primary);
-  font-weight: 700;
+  color: #c084fc;
+  font-weight: 800;
 }
+
 .comp-mini-stats {
   display: flex;
   gap: 0.75rem;
+  justify-content: flex-end;
 }
+
 .mini-stat-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.4rem 0.8rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #cbd5e1;
-  border: 1px solid #222b3c;
-}
-
-/* ==========================================================================
-   HLTV STYLE STAGE SELECTOR (MENÚ SUPERIOR DE BOTONES)
-   ========================================================================== */
-.hltv-stage-container {
-  background: #111622;
-  border: 1px solid #222b3c;
-  padding: 0.5rem;
+  background: rgba(22, 24, 36, 0.7);
+  border: 1px solid #2a2d42;
+  padding: 0.45rem 0.9rem;
   border-radius: 6px;
-  margin-bottom: 2rem;
-}
-.hltv-stage-selector-bar {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-}
-.hltv-stage-btn {
-  background: transparent;
-  border: none;
-  color: #a0aec0;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  transition: all 0.2s ease;
-}
-.hltv-stage-btn:hover {
-  background: rgba(255, 255, 255, 0.03);
-  color: #fff;
-}
-.hltv-stage-active {
-  background: #222b3c !important;
-  color: var(--primary) !important;
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
-}
-
-/* ==========================================================================
-   HLTV MATCH CARD DESIGN (GRILLA DE SERIES)
-   ========================================================================== */
-.hltv-series-grid-layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.hltv-match-card-wrapper {
-  background: #161c28;
-  border: 1px solid #222b3c;
-  border-radius: 6px;
-  overflow: hidden;
-  cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    border-color 0.15s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-.hltv-match-card-wrapper:hover {
-  transform: translateY(-2px);
-  border-color: #4a5568;
-}
-
-.hltv-card-top-meta {
-  background: #111520;
-  padding: 0.5rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #222b3c;
-}
-.hltv-series-format-tag {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #718096;
-  letter-spacing: 0.03em;
-}
-
-.hltv-status-badge {
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #a0aec0;
-}
-.hltv-live-indicator {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  font-size: 0.7rem;
-  font-weight: 900;
-  padding: 2px 6px;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  letter-spacing: 0.05em;
-}
-.live-dot {
-  width: 6px;
-  height: 6px;
-  background: #ef4444;
-  border-radius: 50%;
-  animation: hltvPulse 1.2s infinite;
-}
-
-@keyframes hltvPulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-}
-
-.hltv-card-teams-block {
-  padding: 0.5rem 0;
-}
-.hltv-team-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.6rem 1rem;
-  color: #a0aec0;
-}
-.hltv-team-identity {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.hltv-team-logo-placeholder {
-  width: 24px;
-  height: 24px;
-  background: #1f2736;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.8rem;
-  color: #fff;
-}
-.hltv-team-name-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  max-width: 170px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.hltv-team-score-num {
-  font-family: monospace;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.hltv-row-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.hltv-row-winner {
-  color: #fff !important;
-  background: rgba(16, 185, 129, 0.03);
-  border-left: 3px solid #10b981;
-  padding-left: calc(1rem - 3px);
-}
-.hltv-row-winner .hltv-team-score-num {
-  color: #10b981;
-}
-
-.hltv-card-live-border {
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.1);
-}
-
-.hltv-card-footer-action {
-  background: #111520;
-  padding: 0.4rem 1rem;
-  border-top: 1px solid #222b3c;
-  text-align: center;
-}
-.hltv-action-text {
   font-size: 0.75rem;
-  color: #718096;
+  font-weight: 700;
+  color: #f3f4f6;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-}
-.hltv-match-card-wrapper:hover .hltv-action-text {
-  color: var(--primary);
+  gap: 0.4rem;
 }
 
-/* ==========================================================================
-   CUP BRACKET MIRROR LAYOUT (MULTI-RONDA ELÁSTICO)
-   ========================================================================== */
-.bracket-viewport {
+.competition-workspace-full {
   width: 100%;
-  overflow-x: auto;
-  padding: 1rem 0;
+  flex: 1;
 }
 
-.cup-mirror-elastic-grid {
+.tournament-grid-layout {
   display: grid;
-  gap: 2.5rem;
-  align-items: center;
-  min-width: 1250px;
-  padding: 2.5rem 1.5rem;
-  background: #0f131c;
-  border: 1px solid #222b3c;
-  border-radius: 8px;
-  box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.6);
-}
-
-.cup-elastic-column {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  justify-content: center;
-}
-
-.cup-stage-title {
-  font-size: 0.75rem;
-  color: #718096;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 800;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.branch-center-highlight {
-  background: rgba(139, 92, 246, 0.02);
-  border-left: 1px dashed rgba(139, 92, 246, 0.15);
-  border-right: 1px dashed rgba(139, 92, 246, 0.15);
-  padding: 2rem 1rem;
-  border-radius: 6px;
-}
-
-.grand-final-title {
-  color: #f59e0b !important;
-  border-color: rgba(245, 158, 11, 0.2) !important;
-  background: rgba(245, 158, 11, 0.03) !important;
-}
-
-.trophy-cup-icon-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-}
-
-.gold-glow-icon {
-  color: #f59e0b;
-  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.3));
-}
-
-.matches-column-flow {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  flex-grow: 1;
+  grid-template-columns: 2fr 1fr;
   gap: 2rem;
-}
-
-.empty-card {
-  border: 1px dashed #222b3c;
-  background: rgba(0, 0, 0, 0.15);
-  padding: 2rem 1rem;
-  color: #4a5568;
-  font-size: 0.85rem;
-  text-align: center;
-  font-weight: 600;
-  text-transform: uppercase;
+  width: 100%;
 }

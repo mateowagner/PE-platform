@@ -1,0 +1,156 @@
+/* pe-web/src/components/ChampionTrophyModal.css */
+.champion-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.92);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeInModal 0.3s ease-out forwards;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.champion-card-container {
+  background: radial-gradient(circle at top, #1c1528 0%, #101014 100%);
+  border: 2px solid #a855f7;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 760px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  position: relative;
+  box-shadow:
+    0 0 50px rgba(168, 85, 247, 0.3),
+    inset 0 0 20px rgba(168, 85, 247, 0.1);
+}
+
+.btn-close-champion {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.trophy-glow-icon {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.trophy-svg {
+  color: #fbbf24;
+  filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
+}
+
+.sparkle-svg {
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  color: #a855f7;
+  animation: pulse 1s infinite alternate;
+}
+
+.champion-badge {
+  display: inline-block;
+  background: linear-gradient(90deg, #9333ea, #ef4444);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  margin-bottom: 0.5rem;
+}
+
+.champion-team-name {
+  font-family: var(--font-display, sans-serif);
+  font-size: 2.2rem;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.champion-tournament-sub {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  margin-bottom: 2rem;
+}
+
+.roster-lineup-title {
+  font-size: 0.8rem;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1rem;
+}
+
+.starters-cards-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .starters-cards-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.player-trophy-card {
+  background: #18181f;
+  border: 1px solid #2a2a35;
+  border-radius: 8px;
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.role-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #06b6d4;
+  margin-bottom: 0.25rem;
+}
+
+.player-ign {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f3f4f6;
+}
+
+.player-riot-tag {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.player-tier-badge {
+  font-size: 0.65rem;
+  color: #fbbf24;
+  font-weight: 600;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
