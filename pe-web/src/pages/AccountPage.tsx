@@ -1,6 +1,10 @@
-import { useState } from "react";
+// pe-web/src/pages/AccountPage.tsx
+import { useState, useEffect } from "react";
 import { useAuthStore } from "../store/authStore";
-import { useApi } from "../hooks/useApi";
+import { useAuth } from "../hooks/useAuth";
+import { apiClient } from "../config/apiClient";
+import { RefreshCw, CheckCircle2 } from "lucide-react";
+import axios from "axios";
 import "./AccountPage.css";
 
 const RANK_EMBLEMS: Record<string, string> = {
@@ -51,7 +55,7 @@ function RankCard({
   rank?: string | null;
   lp?: number | null;
 }) {
-  if (!tier) {
+  if (!tier || tier.toUpperCase() === "UNRANKED") {
     return (
       <div className="rank-card rank-unranked">
         <div className="rank-card-label">{label}</div>
@@ -63,13 +67,15 @@ function RankCard({
     );
   }
 
+  const normalizedTier = tier.toUpperCase();
+
   return (
     <div className="rank-card">
       <div className="rank-card-label">{label}</div>
       <div className="rank-card-content">
         <img
-          src={RANK_EMBLEMS[tier]}
-          alt={tier}
+          src={RANK_EMBLEMS[normalizedTier] || RANK_EMBLEMS.UNRANKED}
+          alt={normalizedTier}
           className="rank-emblem"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
@@ -77,7 +83,7 @@ function RankCard({
         />
         <div className="rank-info">
           <span className="rank-tier-name">
-            {TIER_NAMES[tier] ?? tier} {rank}
+            {TIER_NAMES[normalizedTier] ?? normalizedTier} {rank}
           </span>
           <span className="rank-lp">{lp ?? 0} LP</span>
         </div>
@@ -88,40 +94,87 @@ function RankCard({
 
 export default function AccountPage() {
   const { user, updateUser } = useAuthStore();
-  const { authFetch } = useApi();
   const [riotId, setRiotId] = useState("");
   const [linking, setLinking] = useState(false);
   const [linkError, setLinkError] = useState("");
   const [linkSuccess, setLinkSuccess] = useState("");
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+  const [syncError, setSyncError] = useState("");
+
+  const { linkRiotAccount } = useAuth();
+
+  // Revalidar el perfil en la base de datos al montar la página
+  useEffect(() => {
+    let isMounted = true;
+    async function loadFreshUser() {
+      try {
+        const { data } = await apiClient.get("/users/me");
+        if (data && isMounted) {
+          updateUser(data);
+        }
+      } catch {
+        // Silencioso si falla background fetch
+      }
+    }
+    void loadFreshUser();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLinkRiot = async (e: React.FormEvent) => {
     e.preventDefault();
     setLinkError("");
     setLinkSuccess("");
     setLinking(true);
+
     try {
-      const res = await authFetch("/auth/link-riot", {
-        method: "POST",
-        body: JSON.stringify({ riotId }),
-      });
-      const data = (await res.json()) as {
-        message: string;
-        gameName: string;
-        tagLine: string;
-        user?: Partial<typeof user>;
-      };
-      if (!res.ok) {
-        const err = data as unknown as { message: string };
-        setLinkError(err.message || "Error al vincular");
-        return;
-      }
+      const data = await linkRiotAccount(riotId);
       if (data.user) updateUser(data.user);
+
       setLinkSuccess(`✓ Cuenta vinculada: ${data.gameName}#${data.tagLine}`);
       setRiotId("");
-    } catch {
-      setLinkError("Error de conexión");
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setLinkError(
+          err.response?.data?.message || "Error al vincular la cuenta",
+        );
+      } else {
+        setLinkError("Error de conexión con el servidor");
+      }
     } finally {
       setLinking(false);
+    }
+  };
+
+  const handleSyncRank = async () => {
+    setSyncing(true);
+    setSyncError("");
+    setSyncSuccess(false);
+
+    try {
+      // POST al endpoint de sincronización con Riot API
+      const { data } = await apiClient.post("/users/me/sync-rank");
+
+      // Actualizamos inmediatamente el estado en Zustand y localStorage
+      if (data) {
+        updateUser(data);
+        setSyncSuccess(true);
+        setTimeout(() => setSyncSuccess(false), 3000);
+      }
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setSyncError(
+          err.response?.data?.message ||
+            "No se pudo sincronizar el rango con Riot.",
+        );
+      } else {
+        setSyncError("Error de conexión con el servidor.");
+      }
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -152,7 +205,24 @@ export default function AccountPage() {
 
         {/* Riot account */}
         <section className="account-card card fade-in-delay-1">
-          <h2 className="account-section-title">Cuenta Riot Games</h2>
+          <div className="account-card-header-row">
+            <h2 className="account-section-title">Cuenta Riot Games</h2>
+            {user?.riotGameName && (
+              <button
+                type="button"
+                className="btn-sync-rank"
+                onClick={handleSyncRank}
+                disabled={syncing}
+                title="Actualizar divisiones y LP desde Riot Games"
+              >
+                <RefreshCw
+                  size={14}
+                  className={syncing ? "animate-spin" : ""}
+                />
+                <span>{syncing ? "Sincronizando..." : "Actualizar Rango"}</span>
+              </button>
+            )}
+          </div>
 
           {user?.riotGameName ? (
             <div className="riot-linked">
@@ -172,6 +242,14 @@ export default function AccountPage() {
                   {user.rankPoints ?? 0} puntos de clasificación
                 </span>
               </div>
+
+              {syncSuccess && (
+                <div className="link-success flex items-center gap-1">
+                  <CheckCircle2 size={15} /> Rangos actualizados correctamente
+                  desde Riot Games.
+                </div>
+              )}
+              {syncError && <div className="auth-error">{syncError}</div>}
 
               <div className="ranks-grid">
                 <RankCard

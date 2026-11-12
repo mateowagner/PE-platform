@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useApi } from "../hooks/useApi"; // Ajustá el path según tus carpetas
+import { useInvitations } from "../hooks/useInvitations";
+import axios from "axios";
 
 // Definimos que ahora el componente exige recibir el teamId real por props
 interface SendInvitationFormProps {
@@ -9,8 +10,7 @@ interface SendInvitationFormProps {
 export default function SendInvitationForm({
   teamId,
 }: SendInvitationFormProps) {
-  const { authFetch } = useApi();
-
+  const { sendInvitation } = useInvitations();
   const [inviteeId, setInviteeId] = useState("");
   const [sending, setSending] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -25,40 +25,22 @@ export default function SendInvitationForm({
     setInviteSuccess(false);
 
     try {
-      // Usamos el teamId que viene por props de forma segura
-      const res = await authFetch(`/invitations/${teamId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: inviteeId }),
-      });
-
-      // Si la respuesta no es OK, leemos el JSON defensivamente
-      if (!res.ok) {
-        let errorMessage =
-          "No se pudo enviar la invitación. Verifica el ID del jugador.";
-        try {
-          const data = await res.json();
-          // Si el backend mandó un mensaje personalizado (ej: "El jugador no existe"), usamos ese
-          if (data.message) errorMessage = data.message;
-        } catch {
-          // Si ni siquiera se puede parsear el JSON (ej: un 404 de ruta), nos quedamos con el mensaje genérico
-        }
-        throw new Error(errorMessage);
-      }
+      // Llamada limpia a la capa de red
+      await sendInvitation(teamId, inviteeId);
 
       setInviteSuccess(true);
       setInviteeId("");
-    } catch (err: any) {
-      // REGLA DEFENSIVA: Si el error es un "Cannot POST" o error de red crudo, lo solapamos
-      if (
-        err.message.includes("Cannot POST") ||
-        err.message.includes("Failed to fetch")
-      ) {
+    } catch (err) {
+      // Delegamos el chequeo de red a Axios
+      if (axios.isAxiosError(err)) {
+        setInviteError(
+          err.response?.data?.message ||
+            "No se pudo enviar la invitación. Verifica el ID.",
+        );
+      } else {
         setInviteError(
           "Hubo un problema de conexión con el servidor. Intentalo más tarde.",
         );
-      } else {
-        setInviteError(err.message);
       }
     } finally {
       setSending(false);

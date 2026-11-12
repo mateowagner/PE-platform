@@ -1,12 +1,15 @@
+// pe-api/src/series/entities/series.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Tournament } from '../../tournaments/entities/tournament.entity';
 import { Team } from '../../teams/entities/team.entity';
+import { Match } from '../../matches/entities/match.entity';
 
 export enum SeriesStatus {
   PENDING = 'PENDING',
@@ -19,19 +22,18 @@ export enum SeriesSlot {
   TEAM_B = 'TEAM_B',
 }
 
-@Entity('tournament_series')
-export class TournamentSeries {
+@Entity('series')
+export class Serie {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  // --- RELACIONES ESTRUCTURALES ---
-  @ManyToOne(() => Tournament, { onDelete: 'CASCADE' }) // <-- Agregamos el cascade delete acá
+  @ManyToOne(() => Tournament, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tournament_id' })
   tournament!: Tournament;
 
   @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'team_a_id' })
-  team_a?: Team; // Nullable para esperar clasificados en rondas avanzadas
+  team_a?: Team;
 
   @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'team_b_id' })
@@ -39,21 +41,19 @@ export class TournamentSeries {
 
   @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'winner_id' })
-  winner?: Team; // Se setea automáticamente al finalizar la serie
+  winner?: Team;
 
-  // --- AUTORREFERENCIA (Árbol binario para formato Copa) ---
-  @ManyToOne(() => TournamentSeries, { nullable: true })
+  @ManyToOne(() => Serie, { nullable: true })
   @JoinColumn({ name: 'next_series_id' })
-  next_series?: TournamentSeries; // A dónde viaja el ganador
+  next_series?: Serie;
 
   @Column({
     type: 'enum',
     enum: SeriesSlot,
     nullable: true,
   })
-  next_series_slot?: SeriesSlot; // Qué lugar va a ocupar ('TEAM_A' o 'TEAM_B')
+  next_series_slot?: SeriesSlot;
 
-  // --- LÓGICA DE FORMATO Y PUNTUACIÓN ---
   @Column({ type: 'int', default: 0 })
   team_a_wins!: number;
 
@@ -61,20 +61,24 @@ export class TournamentSeries {
   team_b_wins!: number;
 
   @Column({ type: 'int', default: 2 })
-  wins_required!: number; // Agnóstico: 1 para BO1, 2 para BO3, 3 para BO5
+  wins_required!: number; // 1 para BO1, 2 para BO3, 3 para BO5
 
-  // --- ESTRUCTURA Y ORDEN DEL FIXTURE ---
   @Column({ type: 'int', default: 1 })
-  round_order!: number; // Control numérico interno (1, 2, 3...)
+  round_order!: number;
 
   @Column({ type: 'varchar', length: 100 })
-  stage_name!: string; // Nombre amigable para el frontend ("Cuartos de Final", "Fecha 3")
+  stage_name!: string;
 
-  // --- CONTROL DE ESTADO ---
+  @Column({ type: 'timestamp', nullable: true })
+  scheduled_date?: Date; // 👈 Fecha y hora estimada de la serie
+
   @Column({
     type: 'enum',
     enum: SeriesStatus,
     default: SeriesStatus.PENDING,
   })
   status!: SeriesStatus;
+
+  @OneToMany(() => Match, (match) => match.series)
+  matches!: Match[];
 }

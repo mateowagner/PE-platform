@@ -1,11 +1,14 @@
+// pe-api/src/matches/entities/match.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { TournamentSeries } from '../../series/entities/series.entity';
+import { Serie } from '../../series/entities/series.entity';
 import { Team } from '../../teams/entities/team.entity';
 
 export enum MatchStatus {
@@ -20,13 +23,23 @@ export class Match {
   id!: string;
 
   @Column({ type: 'int' })
-  match_order!: number; // Indica si es el Juego 1, Juego 2, Juego 3...
+  match_order!: number;
 
   @Column({ type: 'varchar', length: 150, nullable: true })
-  riot_match_id?: string; // El ID real de la API de Riot Games
+  riot_match_id?: string;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  tournament_code?: string;
+
+  // 👇 Nuevos campos para salas personalizadas del MVP
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  lobby_name?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  lobby_password?: string;
 
   @Column({ type: 'jsonb', nullable: true })
-  stats?: Record<string, any>; // Guardamos el JSON crudo con todo el KDA, oro, etc.
+  stats?: Record<string, any>;
 
   @Column({
     type: 'enum',
@@ -35,12 +48,23 @@ export class Match {
   })
   status!: MatchStatus;
 
-  // --- RELACIONES ---
-  @ManyToOne(() => TournamentSeries, { onDelete: 'CASCADE' })
+  @Column({ type: 'timestamp', nullable: true })
+  start_date?: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  end_date?: Date;
+
+  @CreateDateColumn({ type: 'timestamp' })
+  created_at!: Date;
+
+  @UpdateDateColumn({ type: 'timestamp' })
+  updated_at!: Date;
+
+  @ManyToOne(() => Serie, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'series_id' })
-  series!: TournamentSeries;
+  series!: Serie;
 
   @ManyToOne(() => Team, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'winner_id' })
-  winner?: Team; // El equipo que destruyó el nexo
+  winner?: Team;
 }

@@ -1,3 +1,4 @@
+// pe-api/src/tournaments/entities/tournament.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,11 +9,10 @@ import {
   ManyToOne,
   JoinTable,
   OneToMany,
-  //OneToMany,
 } from 'typeorm';
 import { Team } from '../../teams/entities/team.entity';
 import { User } from '../../users/entities/user.entity';
-import { TournamentSeries } from '../../series/entities/series.entity'; // La crearemos luego
+import { Serie } from '../../series/entities/series.entity';
 
 export enum TournamentType {
   LEAGUE = 'LEAGUE',
@@ -26,11 +26,37 @@ export enum TournamentStatus {
 }
 
 export enum SkillTier {
+  OPEN = 'OPEN', // 👈 Sin restricción de elo
   DIV_1 = 'DIV_1',
   DIV_2 = 'DIV_2',
-  TIER_HIGH = 'TIER_HIGH',
-  TIER_MID = 'TIER_MID',
-  TIER_LOW = 'TIER_LOW',
+  HIGH_TIER = 'HIGH_TIER',
+  MID_HIGH = 'MID_HIGH',
+  MID = 'MID',
+  LOW = 'LOW',
+}
+
+export enum SeriesFormat {
+  BO1 = 'BO1',
+  BO3 = 'BO3',
+  BO5 = 'BO5',
+}
+
+export enum ScheduleType {
+  SAME_DAY = 'SAME_DAY',
+  WEEKEND = 'WEEKEND',
+  CUSTOM = 'CUSTOM',
+}
+
+export enum MapType {
+  SUMMONERS_RIFT = 'SUMMONERS_RIFT',
+  HOWLING_ABYSS = 'HOWLING_ABYSS',
+}
+
+export enum PickType {
+  BLIND_PICK = 'BLIND_PICK',
+  DRAFT_MODE = 'DRAFT_MODE',
+  ALL_RANDOM = 'ALL_RANDOM',
+  TOURNAMENT_DRAFT = 'TOURNAMENT_DRAFT',
 }
 
 @Entity('tournaments')
@@ -61,8 +87,38 @@ export class Tournament {
   @Column({
     type: 'enum',
     enum: SkillTier,
+    default: SkillTier.OPEN,
   })
   skill_tier!: SkillTier;
+
+  // Formato competitivo
+  @Column({
+    type: 'enum',
+    enum: SeriesFormat,
+    default: SeriesFormat.BO3,
+  })
+  default_series_format!: SeriesFormat;
+
+  @Column({
+    type: 'enum',
+    enum: SeriesFormat,
+    default: SeriesFormat.BO3,
+  })
+  final_series_format!: SeriesFormat;
+
+  // Planificación de calendario
+  @Column({
+    type: 'enum',
+    enum: ScheduleType,
+    default: ScheduleType.SAME_DAY,
+  })
+  schedule_type!: ScheduleType;
+
+  @Column({ type: 'int', default: 7 })
+  days_between_rounds!: number; // Para LEAGUE (ej. 7 semanal, 14 quincenal)
+
+  @Column({ type: 'decimal', precision: 4, scale: 2, default: 1.5 })
+  hours_between_rounds!: number; // Para CUP en SAME_DAY (default: 1.5h)
 
   // Fechas de Inscripción
   @Column({ type: 'timestamp' })
@@ -78,7 +134,7 @@ export class Tournament {
   @Column({ type: 'timestamp', nullable: true })
   end_date?: Date;
 
-  // Configuración de Cupos y Costos
+  // Cupos y Costos
   @Column({ type: 'int', default: 16 })
   max_teams!: number;
 
@@ -88,13 +144,10 @@ export class Tournament {
   @Column({ type: 'varchar', nullable: true })
   prize_pool?: string;
 
-  // Fase actual (Ej: "Jornada 1", "Cuartos de Final")
   @Column({ type: 'varchar', default: 'PRE-TORNEO' })
   current_stage!: string;
 
-  // --- RELACIONES ---
-
-  @ManyToMany(() => Team, (team) => team.tournaments, {})
+  @ManyToMany(() => Team, (team) => team.tournaments)
   @JoinTable({
     name: 'tournament_participants',
     joinColumn: { name: 'tournament_id', referencedColumnName: 'id' },
@@ -108,12 +161,29 @@ export class Tournament {
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   created_by!: User;
 
-  @OneToMany(() => TournamentSeries, (series) => series.tournament)
-  series!: TournamentSeries[];
+  @OneToMany(() => Serie, (series) => series.tournament)
+  series!: Serie[];
 
   @CreateDateColumn()
   created_at!: Date;
 
   @UpdateDateColumn()
   updated_at!: Date;
+
+  @Column({
+    type: 'enum',
+    enum: MapType,
+    default: MapType.SUMMONERS_RIFT,
+  })
+  map_type!: MapType;
+
+  @Column({
+    type: 'enum',
+    enum: PickType,
+    default: PickType.TOURNAMENT_DRAFT,
+  })
+  pick_type!: PickType;
+
+  @Column({ type: 'varchar', nullable: true })
+  riot_tournament_id?: string;
 }

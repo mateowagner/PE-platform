@@ -1,37 +1,45 @@
 import { useState, useEffect } from "react";
-import { useApi } from "../hooks/useApi";
 import type { Tournament } from "../types";
 import TournamentCard from "../components/TournamentCard";
+import { useAuthStore } from "../store/authStore";
+import CreateTournamentModal from "../components/CreateTournamentModal";
+import { useTournaments } from "../hooks/useTournaments";
+import axios from "axios";
 
 export default function TournamentsPage() {
-  const { authFetch } = useApi();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const user = useAuthStore((state) => state.user);
+  const { getTournaments } = useTournaments();
+
+  const fetchTournaments = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getTournaments();
+      setTournaments(data);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Error al cargar los torneos");
+      } else {
+        setError("Error de conexión con el servidor.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTournaments = async () => {
-      setLoading(true);
-      try {
-        // Asumo que tu endpoint en NestJS es GET /tournaments
-        const res = await authFetch("/tournaments");
-
-        if (!res.ok) {
-          throw new Error("No se pudieron cargar los torneos");
-        }
-
-        const data = (await res.json()) as Tournament[];
-        // Guardamos los torneos en el estado de React
-        setTournaments(data);
-      } catch (err) {
-        setError("Ocurrió un error al conectar con el servidor.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     void fetchTournaments();
-  }, []); // El array vacío asegura que esto se ejecute solo una vez al abrir la página
+  }, []);
+
+  const handleTournamentCreated = (newTournament: Tournament) => {
+    setTournaments((prev) => [newTournament, ...prev]);
+    setIsCreateModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -57,27 +65,66 @@ export default function TournamentsPage() {
     );
   }
 
-  // Opcional: Filtramos para mostrar solo los que no están terminados
   const activeTournaments = tournaments.filter((t) => t.status !== "FINISHED");
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: "2rem" }}>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            color: "var(--text-primary)",
-            marginBottom: "0.5rem",
-          }}
-        >
-          Torneos Activos
-        </h1>
-        <p style={{ color: "var(--text-muted)" }}>
-          Inscribí a tu equipo en las próximas competencias y sumá puntos para
-          la liga.
-        </p>
+      {/* ─── ENCABEZADO CON RENDERIZADO CONDICIONAL ────────────────────────── */}
+      <div
+        style={{
+          marginBottom: "2rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: "250px" }}>
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              color: "var(--text-primary)",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Torneos Activos
+          </h1>
+          <p style={{ color: "var(--text-muted)" }}>
+            Inscribí a tu equipo en las próximas competencias y sumá puntos para
+            la liga.
+          </p>
+        </div>
+
+        {user?.role === "ADMIN" && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            style={{
+              background: "linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)",
+              color: "#ffffff",
+              border: "none",
+              padding: "0.75rem 1.5rem",
+              borderRadius: "6px",
+              fontFamily: "var(--font-display)",
+              fontWeight: "bold",
+              textTransform: "uppercase",
+              fontSize: "0.85rem",
+              letterSpacing: "0.5px",
+              cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
+              transition: "transform 0.2s ease",
+            }}
+            onMouseOver={(e) =>
+              (e.currentTarget.style.transform = "scale(1.02)")
+            }
+            onMouseOut={(e) => (e.currentTarget.style.transform = "none")}
+          >
+            + Crear Torneo
+          </button>
+        )}
       </div>
 
+      {/* ─── GRILLA DE TORNEOS ─────────────────────────────────────────────── */}
       {activeTournaments.length === 0 ? (
         <div
           style={{
@@ -104,6 +151,13 @@ export default function TournamentsPage() {
           ))}
         </div>
       )}
+
+      {/* ─── MODAL INTERACTIVO DE CREACIÓN ────────────────────── */}
+      <CreateTournamentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onTournamentCreated={handleTournamentCreated}
+      />
     </div>
   );
 }

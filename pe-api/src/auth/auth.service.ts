@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/auth.dto';
-
+import { UserRole } from '../users/entities/user.entity';
 interface AuthResult {
   accessToken: string;
   refreshToken: string;
@@ -90,18 +90,18 @@ export class AuthService {
   private async generateTokens(
     userId: string,
     username: string,
-    role: string,
+    role: UserRole,
   ): Promise<AuthResult> {
     const payload = { sub: userId, username, role };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: this.config.getOrThrow<string>('JWT_SECRET'),
-        expiresIn: '15m',
-      }),
+      // ➔ Toma el secreto y los '15m' automáticamente del AuthModule
+      this.jwtService.signAsync(payload),
+
+      // El refresh sigue requiriendo sus propios datos específicos
       this.jwtService.signAsync(payload, {
         secret: this.config.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: '7d',
+        expiresIn: '30d',
       }),
     ]);
 

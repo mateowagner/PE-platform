@@ -1,17 +1,21 @@
 import {
   Controller,
-  Get,
   Post,
-  Body,
+  Get,
+  Delete,
   Patch,
   Param,
-  Delete,
+  Body,
   ParseUUIDPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { SeriesService } from './series.service';
-import { TournamentSeries } from './entities/series.entity';
+import { RescheduleSeriesDto } from './dto/reschedule-series.dto';
+import { JwtAuthGuard, RolesGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 import { CreateSeriesDto } from './dto/create-series.dto';
-
+import { Serie } from './entities/series.entity';
 @Controller('series')
 export class SeriesController {
   constructor(private readonly seriesService: SeriesService) {}
@@ -39,7 +43,7 @@ export class SeriesController {
   @Patch(':id')
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateSeriesDto: Partial<TournamentSeries>,
+    @Body() updateSeriesDto: Partial<Serie>,
   ) {
     return await this.seriesService.update(id, updateSeriesDto);
   }
@@ -48,5 +52,14 @@ export class SeriesController {
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     await this.seriesService.remove(id);
     return { message: `Serie ${id} eliminada correctamente.` };
+  }
+  @Patch(':id/reschedule')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  async reschedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RescheduleSeriesDto,
+  ) {
+    return await this.seriesService.reschedule(id, dto.scheduled_date);
   }
 }

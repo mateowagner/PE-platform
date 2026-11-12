@@ -1,3 +1,4 @@
+// pe-api/src/teams/teams.controller.ts
 import {
   Controller,
   Get,
@@ -8,66 +9,124 @@ import {
   Delete,
   UseGuards,
   Req,
-  HttpCode,
-  HttpStatus,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import type { Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { TeamsService } from './teams.service';
-import { CreateTeamDto } from './dto/create-team.dto';
-import { UpdateTeamDto } from './dto/update-team.dto';
-import { JwtAuthGuard } from '../auth/Guards';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequestUser } from '../auth/jwt.strategy';
+import { GetUser } from '../common/decorators/get-user.decorator';
 
 interface AuthenticatedRequest extends Request {
   user: RequestUser;
 }
 
+const multerOptions = {
+  storage: diskStorage({
+    destination: './uploads/teams',
+    filename: (
+      _req: Request,
+      file: Express.Multer.File,
+      cb: (error: Error | null, filename: string) => void,
+    ) => {
+      const randomName = Array(32)
+        .fill(null)
+        .map(() => Math.round(Math.random() * 16).toString(16))
+        .join('');
+      cb(null, `${randomName}${extname(file.originalname).toLowerCase()}`);
+    },
+  }),
+  fileFilter: (
+    _req: Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, acceptFile: boolean) => void,
+  ) => {
+    if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
+      return cb(
+        new BadRequestException('Solo se permiten imágenes JPEG o PNG.'),
+        false,
+      );
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3 MB
+};
+
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
-  // Crear equipo — el usuario autenticado se convierte en owner y primer miembro
   @Post()
   @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateTeamDto, @Req() req: AuthenticatedRequest) {
-    return this.teamsService.createWithOwner(dto, req.user.id);
+  @UseInterceptors(FileInterceptor('logo', multerOptions))
+  async createTeam(
+    @Body('name') name: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @GetUser('id') ownerId: string,
+  ) {
+    if (!name || name.trim().length < 3) {
+      throw new BadRequestException(
+        'El nombre del equipo es obligatorio y debe tener al menos 3 caracteres.',
+      );
+    }
+
+    const logoUrl = file ? `/uploads/teams/${file.filename}` : undefined;
+
+    return await this.teamsService.createWithOwner(
+      { name: name.trim(), logo_url: logoUrl },
+      ownerId,
+    );
   }
 
-  // Mi equipo — devuelve el equipo del usuario autenticado
   @Get('my-team')
   @UseGuards(JwtAuthGuard)
-  getMyTeam(@Req() req: AuthenticatedRequest) {
-    return this.teamsService.findByMember(req.user.id);
+  async getMyTeam(@Req() req: AuthenticatedRequest) {
+    return await this.teamsService.findByMember(req.user.id);
   }
 
   @Get()
-  findAll() {
-    return this.teamsService.findAll();
+  async findAll() {
+    return await this.teamsService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.teamsService.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.teamsService.findOne(id);
   }
 
   @Get(':id/members')
-  getMembers(@Param('id') id: string) {
-    return this.teamsService.getMembers(id);
+  async getMembers(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.teamsService.getMembers(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  update(@Param('id') id: string, @Body() dto: UpdateTeamDto) {
-    return this.teamsService.update(id, dto);
+  @UseInterceptors(FileInterceptor('logo', multerOptions))
+  async updateTeam(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('name') name: string | undefined,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    const logoUrl = file ? `/uploads/teams/${file.filename}` : undefined;
+
+    return await this.teamsService.update(id, {
+      ...(name ? { name: name.trim() } : {}),
+      ...(logoUrl ? { logo_url: logoUrl } : {}),
+    });
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string) {
-    return this.teamsService.remove(id);
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    return await this.teamsService.remove(id);
   }
+
   @Delete(':teamId/members/:memberId')
   @UseGuards(JwtAuthGuard)
   async removeMember(
@@ -77,9 +136,10 @@ export class TeamsController {
   ) {
     return await this.teamsService.removeMember(teamId, req.user.id, memberId);
   }
+
   @Post('leave')
   @UseGuards(JwtAuthGuard)
-  leaveTeam(@Req() req: AuthenticatedRequest) {
-    return this.teamsService.leaveTeam(req.user.id);
+  async leaveTeam(@Req() req: AuthenticatedRequest) {
+    return await this.teamsService.leaveTeam(req.user.id);
   }
 }

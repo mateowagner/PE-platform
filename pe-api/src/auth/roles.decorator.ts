@@ -1,0 +1,5 @@
+import { SetMetadata } from '@nestjs/common';
+import { UserRole } from '../users/entities/user.entity'; // Ajustá el path a tu entidad User
+
+export const ROLES_KEY = 'roles';
+export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);

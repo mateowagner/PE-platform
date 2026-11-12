@@ -242,3 +242,54 @@
   font-size: 0.875rem;
   color: var(--success);
 }
+.account-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.account-card-header-row .account-section-title {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.btn-sync-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  background: #141724;
+  border: 1px solid #282d42;
+  color: #9ca3af;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sync-rank:hover:not(:disabled) {
+  border-color: #06b6d4;
+  color: #ffffff;
+  background: #1b1f30;
+}
+
+.btn-sync-rank:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.animate-spin {
+  animation: spinSync 1s linear infinite;
+}
+
+@keyframes spinSync {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

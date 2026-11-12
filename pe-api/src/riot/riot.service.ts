@@ -8,6 +8,46 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 // ─── Tipos de respuesta de Riot API ─────────────────────────────────────────
 
+// ─── Tipos para MATCH-V5 ───────────────────────────────────────────────────
+
+export interface RiotMatchParticipant {
+  puuid: string;
+  riotIdGameName?: string;
+  riotIdTagline?: string;
+  summonerName?: string;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  totalDamageDealtToChampions: number;
+  goldEarned: number;
+  win: boolean;
+  teamId: number;
+  // Slots de objetos (inventario final)
+  item0: number;
+  item1: number;
+  item2: number;
+  item3: number;
+  item4: number;
+  item5: number;
+  item6: number; // Trinket / Baratija
+  roleBoundItem?: number; // Objeto de rol / misión (botas ADC, ítem soporte, jungla)
+}
+
+export interface RiotMatchDto {
+  metadata: {
+    matchId: string;
+    participants: string[];
+  };
+  info: {
+    gameDuration: number;
+    gameStartTimestamp: number;
+    gameEndTimestamp: number;
+    gameMode: string;
+    gameType: string;
+    participants: RiotMatchParticipant[];
+  };
+}
 interface RiotAccount {
   puuid: string;
   gameName: string;
@@ -182,6 +222,126 @@ export class RiotService {
         );
       }
       return [];
+    }
+  }
+  // ─── API DE TORNEOS (STUB) ────────────────────────────────────────────────
+
+  /**
+   * Obtiene el Provider ID del entorno o registra uno nuevo si no existe.
+   * IMPORTANTE: La URL debe ser tu dominio público (ej: https://api.tuplataforma.com/matches/webhook)
+   */
+  async getOrCreateProviderId(webhookUrl: string): Promise<number> {
+    // 1. Buscamos si ya lo tenés configurado en el .env
+    const envProviderId = this.config.get<number>('RIOT_PROVIDER_ID');
+
+    if (envProviderId) {
+      return envProviderId;
+    }
+
+    // 2. Si no existe, nos registramos en Riot
+    try {
+      const { data } = await this.accountClient.post<number>(
+        '/lol/tournament-stub/v5/providers',
+        {
+          region: 'LAS',
+          url: webhookUrl,
+        },
+      );
+
+      // 3. Te avisamos por consola para que lo guardes para siempre
+      console.warn('====================================================');
+      console.warn(`[ATENCIÓN] Nuevo Provider ID generado en Riot: ${data}`);
+      console.warn(`Por favor, agregá esta línea a tu archivo .env:`);
+      console.warn(`RIOT_PROVIDER_ID=${data}`);
+      console.warn('====================================================');
+
+      return data;
+    } catch (error) {
+      console.error('Error de Riot API:', error);
+      throw new InternalServerErrorException(
+        'Fallo al registrar el Provider en la API de Torneos de Riot',
+      );
+    }
+  }
+
+  /**
+   * Registra un nuevo torneo lógico en Riot Games.
+   * Esto se ejecuta UNA vez cuando creás el torneo en tu plataforma.
+   */
+  async registerTournament(
+    providerId: number,
+    tournamentName: string,
+  ): Promise<number> {
+    try {
+      const { data } = await this.accountClient.post<number>(
+        '/lol/tournament-stub/v5/tournaments',
+        {
+          name: tournamentName,
+          providerId: providerId,
+        },
+      );
+      return data; // Devuelve el tournamentId (ej: 12345)
+    } catch (error) {
+      console.error('Error de Riot API:', error);
+      throw new InternalServerErrorException(
+        `Fallo al registrar el torneo "${tournamentName}" en Riot`,
+      );
+    }
+  }
+
+  /**
+   * Genera el lote (batch) de códigos para repartir en tus partidas.
+   * Esto se ejecuta cuando armás el fixture (generateFixture).
+   */
+  async generateTournamentCodes(
+    tournamentId: number,
+    count: number,
+    mapType: string,
+    pickType: string,
+    metaData: string = '', // UUID de tu Match por defecto vacío
+  ): Promise<string[]> {
+    try {
+      const { data } = await this.accountClient.post<string[]>(
+        `/lol/tournament-stub/v5/codes?count=${count}&tournamentId=${tournamentId}`,
+        {
+          mapType: mapType,
+          pickType: pickType,
+          spectatorType: 'ALL',
+          teamSize: 5,
+          metadata: metaData,
+        },
+      );
+      return data; // Devuelve ['LAS-123', 'LAS-456', ...]
+    } catch (error) {
+      console.error('Error de Riot API:', error);
+      throw new InternalServerErrorException(
+        `Fallo al generar los ${count} códigos de torneo`,
+      );
+    }
+  }
+  /*
+   Obtiene la partida de Riot Games vía MATCH-V5.
+   Acepta "1621435769" o "LA2_1621435769".
+  */
+  async getMatchById(rawMatchId: string): Promise<RiotMatchDto> {
+    const formattedId = rawMatchId.startsWith('LA2_')
+      ? rawMatchId
+      : `LA2_${rawMatchId.trim()}`;
+
+    try {
+      const { data } = await this.accountClient.get<RiotMatchDto>(
+        `/lol/match/v5/matches/${formattedId}`,
+      );
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new BadRequestException(
+          `La partida "${formattedId}" no fue encontrada en los servidores de Riot Games.`,
+        );
+      }
+      throw new InternalServerErrorException(
+        'Fallo al consultar MATCH-V5 en Riot Games.',
+      );
     }
   }
 }
